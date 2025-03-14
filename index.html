@@ -403,8 +403,16 @@
             }
         });
 
-        // 주기적으로 모든 과일 그룹 확인 (0.5초마다)
-        setInterval(checkFruitGroups, 500);
+        // 주기적으로 모든 과일 그룹 확인 (0.1초마다)
+        setInterval(checkFruitGroups, 100);
+        
+        // 충돌 이벤트 감지
+        Events.on(engine, 'collisionStart', function(event) {
+            if (isGameOver) return;
+            
+            // 충돌이 발생하면 즉시 과일 그룹 확인
+            checkFruitGroups();
+        });
         
         // 과일 그룹 확인 및 합치기 함수
         function checkFruitGroups() {
@@ -473,7 +481,7 @@
             
             // 과일이 합쳐졌으면 다시 검사 (연쇄 반응을 위해)
             if (mergedAny) {
-                setTimeout(checkFruitGroups, 300);
+                setTimeout(checkFruitGroups, 100);
             }
         }
         
