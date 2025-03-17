@@ -82,6 +82,79 @@ body {
     pointer-events: none;
 }
 
+#next-fruit-preview {
+    position: absolute;
+    top: 20px;
+    left: 20px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    z-index: 2;
+}
+
+.preview-label {
+    font-size: 14px;
+    font-weight: bold;
+    color: #333;
+    margin-bottom: 5px;
+}
+
+#preview-fruit {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background-color: #ff9999;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-weight: bold;
+    font-size: 16px;
+    color: #ffffff;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+}
+
+/* 다음 과일 미리보기 */
+.preview-container {
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    z-index: 10;
+}
+
+.preview-label {
+    font-size: 12px;
+    margin-bottom: 5px;
+    color: #333;
+    font-weight: bold;
+}
+
+/* 테스트 버튼 스타일 */
+#test-buttons {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    z-index: 10;
+}
+
+#add-score-btn {
+    background-color: #3498db;
+    color: white;
+    border: none;
+    padding: 8px 12px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-weight: bold;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+    transition: background-color 0.2s;
+}
+
+#add-score-btn:hover {
+    background-color: #2980b9;
+}
+
 #game-over {
     position: absolute;
     top: 0;

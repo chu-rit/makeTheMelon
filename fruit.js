@@ -1,15 +1,15 @@
-// 게임 상수
+// 과일 정의
 const FRUITS = [
-    { circleRadius: 25, color: '#FF5733', density: 0.001, score: 1, number: 1, name: '체리' },
-    { circleRadius: 30, color: '#FFC300', density: 0.001, score: 2, number: 2, name: '딸기' },
-    { circleRadius: 35, color: '#DAF7A6', density: 0.001, score: 4, number: 3, name: '포도' },
-    { circleRadius: 40, color: '#C70039', density: 0.001, score: 8, number: 4, name: '오렌지' },
-    { circleRadius: 45, color: '#900C3F', density: 0.001, score: 16, number: 5, name: '감귤' },
-    { circleRadius: 50, color: '#581845', density: 0.001, score: 32, number: 6, name: '사과' },
-    { circleRadius: 55, color: '#2471A3', density: 0.001, score: 64, number: 7, name: '배' },
-    { circleRadius: 60, color: '#138D75', density: 0.001, score: 128, number: 8, name: '복숭아' },
-    { circleRadius: 65, color: '#D4AC0D', density: 0.001, score: 256, number: 9, name: '파인애플' },
-    { circleRadius: 70, color: '#D35400', density: 0.001, score: 512, number: 10, name: '멜론' },
+    { circleRadius: 25, color: '#E74C3C', density: 0.001, score: 1, number: 1, name: '체리' },
+    { circleRadius: 30, color: '#C0392B', density: 0.001, score: 2, number: 2, name: '딸기' },
+    { circleRadius: 35, color: '#9B59B6', density: 0.001, score: 4, number: 3, name: '포도' },
+    { circleRadius: 40, color: '#E67E22', density: 0.001, score: 8, number: 4, name: '오렌지' },
+    { circleRadius: 45, color: '#F1C40F', density: 0.001, score: 16, number: 5, name: '감귤' },
+    { circleRadius: 50, color: '#2ECC71', density: 0.001, score: 32, number: 6, name: '사과' },
+    { circleRadius: 55, color: '#27AE60', density: 0.001, score: 64, number: 7, name: '배' },
+    { circleRadius: 60, color: '#3498DB', density: 0.001, score: 128, number: 8, name: '복숭아' },
+    { circleRadius: 65, color: '#2980B9', density: 0.001, score: 256, number: 9, name: '파인애플' },
+    { circleRadius: 70, color: '#1ABC9C', density: 0.001, score: 512, number: 10, name: '멜론' },
     { circleRadius: 75, color: '#A569BD', density: 0.001, score: 1024, number: 11, name: '수박' }
 ];
 
@@ -33,7 +33,6 @@ function createFruit(x, y, fruitIndex) {
     body.label = 'fruit';
     body.isFruit = true;
     body.fruitIndex = fruitIndex;
-    body.fruitNumber = nextFruitNumber; // 과일에 숫자 할당
     body.id = Date.now() + Math.random(); // 고유 ID 생성
     
     World.add(engine.world, body);
@@ -202,105 +201,97 @@ function updateFruitLabels() {
     }
 }
 
- // 과일 합치기 함수
- function mergeFruits(combination) {
+// 랜덤 과일 숫자 생성 함수 (1-9, 작은 숫자 확률 높음)
+function generateRandom() {
+    const rand = Math.random();
+    
+    if (rand < 0.40) { // 40% 확률로 1-3 사이
+        return Math.floor(Math.random() * 3) + 1;
+    } else if (rand < 0.80) { // 40% 확률로 4-6 사이
+        return Math.floor(Math.random() * 3) + 4;
+    } else { // 20% 확률로 7-9 사이
+        return Math.floor(Math.random() * 3) + 7;
+    }
+}
+
+// 과일 합치기 함수
+function mergeFruits(combination) {
     if (combination.length < 2) return;
     
     // 모든 과일이 같은 종류인지 확인
-    const fruitIndex = combination[0].fruitIndex;
-    for (const fruit of combination) {
-        if (fruit.fruitIndex !== fruitIndex) return;
-    }
-    
-    // 중간 위치 계산
-    let midX = 0, midY = 0;
-    for (const fruit of combination) {
-        midX += fruit.position.x;
-        midY += fruit.position.y;
-    }
-    midX /= combination.length;
-    midY /= combination.length;
-    
-    // 기존 과일 라벨 제거 및 과일 제거
-    for (const fruit of combination) {
-        removeFruitLabel(fruit);
-        removeBody(fruit);
-    }
-    
-    // 다음 단계 과일 생성
-    const newFruitIndex = fruitIndex + 1;
-    if (newFruitIndex < FRUITS.length) {
-        // 랜덤 숫자 생성 (기존 확률 분포 사용)
-        let randomNumber;
-        const rand = Math.random();
-        
-        if (rand < 0.50) { // 50% 확률로 1-3 사이
-            randomNumber = Math.floor(Math.random() * 3) + 1;
-        } else if (rand < 0.80) { // 30% 확률로 4-5 사이
-            randomNumber = Math.floor(Math.random() * 2) + 4;
-        } else if (rand < 0.95) { // 15% 확률로 6-7 사이
-            randomNumber = Math.floor(Math.random() * 2) + 6;
-        } else { // 5% 확률로 8-9 사이
-            randomNumber = Math.floor(Math.random() * 2) + 8;
+    const fruitType = combination[0].fruitIndex;
+    for (let i = 1; i < combination.length; i++) {
+        if (combination[i].fruitIndex !== fruitType) {
+            return;
         }
-        
-        // 새 과일 생성
-        const newFruit = createFruit(midX, midY, newFruitIndex);
-        
-        // 생성된 과일에 랜덤 숫자 할당
-        newFruit.fruitNumber = randomNumber;
-        
-        // 기존 과일 라벨 제거 후 새로 생성
-        removeFruitLabel(newFruit);
-        createFruitLabel(newFruit, randomNumber);
-        
-        // 쿨타임 설정 - 0.5초 동안 합치기 불가능
-        newFruit.cooldown = true;
-        setTimeout(() => {
-            newFruit.cooldown = false;
-        }, 500);
-        
-        // 기본 점수
-        let baseScore = FRUITS[newFruitIndex].score;
-        
-        // 과일 개수에 따른 보너스 점수 계산 (과일 개수 - 1) * 50% 추가
-        let bonusMultiplier = 1 + ((combination.length - 2) * 0.5);
-        
-        // 최종 점수 계산 (기본 점수 * 보너스 배율)
-        let finalScore = Math.floor(baseScore * bonusMultiplier);
-        
-        // 점수 추가
-        score += finalScore;
-        document.getElementById('score').textContent = score;
-        
-        // 로그 남기기
-        const fruitName = FRUITS[fruitIndex].name;
-        const newFruitName = FRUITS[newFruitIndex].name;
-        const numbersText = combination.map(fruit => fruit.fruitNumber).join(' + ');
-        const logText = `${fruitName}(${numbersText}) → ${newFruitName}(${randomNumber}) (${finalScore}점, ${combination.length}개 과일 보너스: x${bonusMultiplier.toFixed(1)})`;
+    }
+    
+    // 합이 10인지 확인
+    let sum = 0;
+    for (let i = 0; i < combination.length; i++) {
+        sum += combination[i].fruitNumber;
+    }
+    
+    if (sum !== 10) {
+        return;
+    }
+    
+    // 모든 과일의 위치 평균 계산
+    let avgX = 0;
+    let avgY = 0;
+    
+    for (let i = 0; i < combination.length; i++) {
+        avgX += combination[i].position.x;
+        avgY += combination[i].position.y;
+    }
+    
+    avgX /= combination.length;
+    avgY /= combination.length;
+    
+    // 다음 과일 인덱스 계산 (최대 10까지)
+    const nextFruitIndex = Math.min(fruitType + 1, 10);
+    
+    // 과일 제거
+    for (let i = 0; i < combination.length; i++) {
+        removeBody(combination[i]);
+        removeFruitLabel(combination[i]);
+    }
+    
+    // 새로운 과일 생성
+    const newFruit = createFruit(avgX, avgY, nextFruitIndex);
+    
+    // 랜덤 숫자 생성 함수 사용
+    const randomNumber = generateRandom();
+    newFruit.fruitNumber = randomNumber;
+    
+    // 합쳐진 과일 개수에 따른 보너스 점수 계산
+    const bonusMultiplier = 1 + ((combination.length - 2) * 0.5);
+    const scoreToAdd = Math.round(FRUITS[nextFruitIndex].score * bonusMultiplier);
+    
+    // 콘솔에 로그 출력
+    if (combination.length > 2) {
+        const logText = `${combination.length}개 과일 합치기! 기본 점수: ${FRUITS[nextFruitIndex].score}, 보너스 배율: ${bonusMultiplier.toFixed(1)}배, 최종 점수: ${scoreToAdd}`;
         console.log(logText);
     }
+    
+    // 기존 과일 라벨 제거 후 새로 생성
+    removeFruitLabel(newFruit);
+    createFruitLabel(newFruit, randomNumber);
+    
+    // 쿨타임 설정 - 0.5초 동안 합치기 불가능
+    newFruit.cooldown = true;
+    setTimeout(() => {
+        newFruit.cooldown = false;
+    }, 500);
+    
+    // 점수 추가
+    score += scoreToAdd;
+    document.getElementById('score').textContent = score;
 }
 
 // 대기 중인 과일 표시
 function updateWaitingFruit() {
     const fruit = FRUITS[nextFruitIndex];
-    
-    // 1부터 9까지의 랜덤한 숫자 생성 (작은 숫자일수록 확률이 훨씬 높게)
-    let randomNumber;
-    const rand = Math.random();
-    
-    if (rand < 0.50) { // 50% 확률로 1-3 사이
-        randomNumber = Math.floor(Math.random() * 3) + 1;
-    } else if (rand < 0.80) { // 30% 확률로 4-5 사이
-        randomNumber = Math.floor(Math.random() * 2) + 4;
-    } else if (rand < 0.95) { // 15% 확률로 6-7 사이
-        randomNumber = Math.floor(Math.random() * 2) + 6;
-    } else { // 5% 확률로 8-9 사이
-        randomNumber = Math.floor(Math.random() * 2) + 8;
-    }
-    
-    nextFruitNumber = randomNumber;
     
     waitingFruitElement.style.width = `${fruit.circleRadius * 2}px`;
     waitingFruitElement.style.height = `${fruit.circleRadius * 2}px`;
@@ -312,12 +303,106 @@ function updateWaitingFruit() {
     waitingFruitElement.style.color = 'white';
     waitingFruitElement.style.fontWeight = 'bold';
     waitingFruitElement.style.fontSize = `${fruit.circleRadius * 0.8}px`;
-    waitingFruitElement.textContent = randomNumber;
+    waitingFruitElement.textContent = nextFruitNumber;
     waitingFruitElement.style.position = 'absolute';
     waitingFruitElement.style.left = `${mouseX - fruit.circleRadius}px`;
     waitingFruitElement.style.top = '70px';
     
     waitingFruitElement.style.display = canDropFruit ? 'flex' : 'none';
+}
+
+// 다음 과일 미리보기 생성
+function generateNextPreviewFruit() {
+    // 현재 점수에 따라 사용 가능한 최대 과일 인덱스 결정
+    let maxFruitIndex = 0;
+    
+    if (score >= 500) {
+        maxFruitIndex = 5; // 500점 이상: 사과까지
+    } else if (score >= 400) {
+        maxFruitIndex = 4; // 400점 이상: 감귤까지
+    } else if (score >= 300) {
+        maxFruitIndex = 3; // 300점 이상: 오렌지까지
+    } else if (score >= 200) {
+        maxFruitIndex = 2; // 200점 이상: 포도까지
+    } else if (score >= 100) {
+        maxFruitIndex = 1; // 100점 이상: 딸기까지
+    } else {
+        maxFruitIndex = 0; // 100점 미만: 체리만
+    }
+    
+    // 사용 가능한 과일 범위 내에서 랜덤 선택
+    afterNextFruitIndex = Math.floor(Math.random() * (maxFruitIndex + 1));
+    
+    // 랜덤 숫자 생성 함수 사용
+    afterNextFruitNumber = generateRandom();
+    
+    // 디버깅용 로그
+    console.log(`현재 점수: ${score}, 사용 가능한 최대 과일: ${maxFruitIndex} (${FRUITS[maxFruitIndex].name}), 선택된 과일: ${afterNextFruitIndex} (${FRUITS[afterNextFruitIndex].name})`);
+}
+
+// 다음 과일 미리보기 업데이트
+function updatePreviewFruit() {
+    const fruit = FRUITS[afterNextFruitIndex];
+    
+    previewFruitElement.style.width = `${fruit.circleRadius * 1.5}px`;
+    previewFruitElement.style.height = `${fruit.circleRadius * 1.5}px`;
+    previewFruitElement.style.backgroundColor = fruit.color;
+    previewFruitElement.style.borderRadius = '50%';
+    previewFruitElement.style.display = 'flex';
+    previewFruitElement.style.justifyContent = 'center';
+    previewFruitElement.style.alignItems = 'center';
+    previewFruitElement.style.color = 'white';
+    previewFruitElement.style.fontWeight = 'bold';
+    previewFruitElement.style.fontSize = `${fruit.circleRadius * 0.6}px`;
+    previewFruitElement.textContent = afterNextFruitNumber;
+}
+
+// 과일들이 서로 접촉 중인지 확인
+function areFruitsInContact(fruits) {
+    if (fruits.length <= 1) return true;
+    
+    // 모든 과일이 직접 접촉하는지 확인 (그래프 연결 확인)
+    const n = fruits.length;
+    const connected = Array(n).fill().map(() => Array(n).fill(false));
+    
+    // 각 과일 쌍에 대해 접촉 여부 확인
+    for (let i = 0; i < n; i++) {
+        connected[i][i] = true; // 자기 자신과는 연결됨
+        
+        for (let j = i + 1; j < n; j++) {
+            const dx = fruits[i].position.x - fruits[j].position.x;
+            const dy = fruits[i].position.y - fruits[j].position.y;
+            const distance = Math.sqrt(dx * dx + dy * dy);
+            
+            const fruitA = FRUITS[fruits[i].fruitIndex];
+            const fruitB = FRUITS[fruits[j].fruitIndex];
+            const minDistance = fruitA.circleRadius + fruitB.circleRadius;
+            
+            // 접촉 여부 확인 (여유 공간 추가)
+            if (distance <= minDistance + 5) {
+                connected[i][j] = connected[j][i] = true;
+            }
+        }
+    }
+    
+    // 모든 과일이 하나의 연결된 그룹을 형성하는지 확인 (BFS 사용)
+    const visited = Array(n).fill(false);
+    const queue = [0]; // 첫 번째 과일부터 시작
+    visited[0] = true;
+    
+    while (queue.length > 0) {
+        const current = queue.shift();
+        
+        for (let i = 0; i < n; i++) {
+            if (connected[current][i] && !visited[i]) {
+                visited[i] = true;
+                queue.push(i);
+            }
+        }
+    }
+    
+    // 모든 과일이 방문되었는지 확인
+    return visited.every(v => v);
 }
 
 // 과일 드롭
@@ -347,7 +432,16 @@ function dropFruit() {
 
 // 다음 과일 준비
 function updateNextFruit() {
-    nextFruitIndex = 0;
+    // 현재 대기 중인 과일을 다음 미리보기 과일로 업데이트
+    nextFruitIndex = afterNextFruitIndex;
+    nextFruitNumber = afterNextFruitNumber;
+    
+    // 새로운 다음 과일 미리보기 생성
+    generateNextPreviewFruit();
+    
+    // 대기 중인 과일 업데이트
     updateWaitingFruit();
+    
+    // 다음 과일 미리보기 업데이트
+    updatePreviewFruit();
 }
-

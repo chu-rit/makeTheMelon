@@ -6,11 +6,14 @@ const container = document.getElementById('game-container');
 const containerWidth = 400;
 const containerHeight = 600;
 const waitingFruitElement = document.getElementById('waiting-fruit');
+const previewFruitElement = document.getElementById('preview-fruit');
 const canvas = document.getElementById('game-canvas');
 const ctx = canvas.getContext('2d');
 
 let score = 0;
 let nextFruitIndex = 0;
+let afterNextFruitIndex = 0;
+let afterNextFruitNumber = 0;
 let canDropFruit = true;
 let isGameOver = false;
 let mouseX = containerWidth / 2;
@@ -19,7 +22,7 @@ let walls = [];
 let fruitLabels = {};
 let nextFruitNumber = 0;
 
-// 캔버스 설정
+// 캔버스 크기
 canvas.width = containerWidth;
 canvas.height = containerHeight;
 
