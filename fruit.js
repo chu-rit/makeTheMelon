@@ -315,7 +315,7 @@ function updateWaitingFruit() {
     waitingFruitElement.textContent = randomNumber;
     waitingFruitElement.style.position = 'absolute';
     waitingFruitElement.style.left = `${mouseX - fruit.circleRadius}px`;
-    waitingFruitElement.style.top = '120px';
+    waitingFruitElement.style.top = '70px';
     
     waitingFruitElement.style.display = canDropFruit ? 'flex' : 'none';
 }

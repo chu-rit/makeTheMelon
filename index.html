@@ -12,8 +12,6 @@
         <div id="score-container">점수: <span id="score">0</span></div>
         <div id="drop-line"></div>
         <div id="waiting-fruit"></div>
-        <div id="special-item">무게추 (3/3)</div>
-        <div id="cooldown-overlay"></div>
         <div id="game-over">
             <div id="game-over-content">
                 <h2>게임 오버</h2>
@@ -66,27 +64,6 @@
             
             walls = [floor, leftWall, rightWall];
             World.add(engine.world, walls);
-        }
-
-        // 특수 무게추 생성
-        function createSpecialWeight(x, y) {
-            const body = Bodies.rectangle(x, y, SPECIAL_WEIGHT.width, SPECIAL_WEIGHT.height, {
-                restitution: 0.2,
-                friction: 0.1,
-                frictionAir: 0.03,
-                frictionStatic: 0.5,
-                density: SPECIAL_WEIGHT.weight
-            });
-            
-            body.isWeight = true;
-            
-            // 초기 속도 설정
-            Body.setVelocity(body, { x: 0, y: SPECIAL_WEIGHT.initialVelocity });
-            
-            World.add(engine.world, body);
-            weights.push(body);
-            
-            return body;
         }
 
         // 충돌 이벤트 설정
@@ -165,18 +142,6 @@
                             document.getElementById('score').textContent = score;
                         }
                     }
-                    
-                    // 무게추와 과일 충돌
-                    if ((bodyA.isWeight && bodyB.isFruit) || (bodyA.isFruit && bodyB.isWeight)) {
-                        const fruit = bodyA.isFruit ? bodyA : bodyB;
-                        
-                        // 과일에 추가 힘 적용
-                        const forceMagnitude = 0.01 * fruit.mass;
-                        Body.applyForce(fruit, fruit.position, {
-                            x: (Math.random() - 0.5) * forceMagnitude,
-                            y: -forceMagnitude
-                        });
-                    }
                 }
             });
         }
@@ -190,25 +155,6 @@
                 if (index > -1) {
                     fruits.splice(index, 1);
                 }
-            } else if (body.isWeight) {
-                const index = weights.indexOf(body);
-                if (index > -1) {
-                    weights.splice(index, 1);
-                }
-            }
-        }
-
-        // 특수 무게추 드롭
-        function dropSpecialWeight(x, y) {
-            if (!SPECIAL_WEIGHT.available || SPECIAL_WEIGHT.remainingUses <= 0) return;
-            
-            createSpecialWeight(x, y);
-            
-            SPECIAL_WEIGHT.remainingUses--;
-            specialItemUI.textContent = `무게추 (${SPECIAL_WEIGHT.remainingUses}/${SPECIAL_WEIGHT.maxUses})`;
-            
-            if (SPECIAL_WEIGHT.remainingUses === 0) {
-                specialItemUI.style.opacity = '0.5';
             }
         }
 
@@ -223,65 +169,11 @@
                     const fruit = FRUITS[nextFruitIndex];
                     waitingFruitElement.style.left = `${mouseX - fruit.circleRadius}px`;
                 }
-                
-                if (isDraggingWeight) {
-                    specialItemUI.style.left = `${e.clientX - rect.left - 40}px`;
-                    specialItemUI.style.top = `${e.clientY - rect.top - 40}px`;
-                }
             });
             
             // 클릭
             container.addEventListener('click', (e) => {
-                if (!isDraggingWeight) {
-                    dropFruit();
-                }
-            });
-            
-            // 무게추 드래그 시작
-            let originalWeightPosition = { top: '20px', right: '20px' };
-            
-            specialItemUI.addEventListener('mousedown', (e) => {
-                if (SPECIAL_WEIGHT.available && SPECIAL_WEIGHT.remainingUses > 0) {
-                    isDraggingWeight = true;
-                    originalWeightPosition = {
-                        top: specialItemUI.style.top,
-                        right: specialItemUI.style.right
-                    };
-                    
-                    specialItemUI.style.right = 'auto';
-                    specialItemUI.style.cursor = 'grabbing';
-                    
-                    const rect = container.getBoundingClientRect();
-                    specialItemUI.style.left = `${e.clientX - rect.left - 40}px`;
-                    specialItemUI.style.top = `${e.clientY - rect.top - 40}px`;
-                    
-                    e.preventDefault();
-                }
-            });
-            
-            // 무게추 드래그 종료
-            document.addEventListener('mouseup', (e) => {
-                if (isDraggingWeight) {
-                    isDraggingWeight = false;
-                    
-                    specialItemUI.style.cursor = 'grab';
-                    
-                    const rect = container.getBoundingClientRect();
-                    const x = e.clientX - rect.left;
-                    const y = e.clientY - rect.top;
-                    
-                    if (x >= 0 && x <= containerWidth && y >= 120 && y <= containerHeight) {
-                        dropSpecialWeight(x, y);
-                        
-                        specialItemUI.style.left = 'auto';
-                        specialItemUI.style.top = originalWeightPosition.top;
-                        specialItemUI.style.right = originalWeightPosition.right;
-                    } else {
-                        specialItemUI.style.left = 'auto';
-                        specialItemUI.style.top = originalWeightPosition.top;
-                        specialItemUI.style.right = originalWeightPosition.right;
-                    }
-                }
+                dropFruit();
             });
             
             // 게임 재시작 버튼
@@ -328,10 +220,6 @@
             nextFruitIndex = 0;
             canDropFruit = true;
             fruits = [];
-            weights = [];
-            SPECIAL_WEIGHT.remainingUses = SPECIAL_WEIGHT.maxUses;
-            specialItemUI.textContent = `무게추 (${SPECIAL_WEIGHT.remainingUses}/${SPECIAL_WEIGHT.maxUses})`;
-            specialItemUI.style.opacity = '1';
             
             if (runner.enabled) {
                 Runner.stop(runner);
@@ -356,10 +244,6 @@
             nextFruitIndex = 0;
             canDropFruit = true;
             fruits = [];
-            weights = [];
-            SPECIAL_WEIGHT.remainingUses = SPECIAL_WEIGHT.maxUses;
-            specialItemUI.textContent = `무게추 (${SPECIAL_WEIGHT.remainingUses}/${SPECIAL_WEIGHT.maxUses})`;
-            specialItemUI.style.opacity = '1';
             
             createWalls();
             setupEventListeners();
@@ -457,26 +341,6 @@
                     
                     // 참고: 숫자는 HTML 라벨로 표시하므로 여기서는 그리지 않음
                 }
-            }
-            
-            // 무게추 그리기
-            ctx.fillStyle = SPECIAL_WEIGHT.color;
-            for (let i = 0; i < weights.length; i++) {
-                const weight = weights[i];
-                const vertices = weight.vertices;
-                
-                ctx.beginPath();
-                ctx.moveTo(vertices[0].x, vertices[0].y);
-                
-                for (let j = 1; j < vertices.length; j++) {
-                    ctx.lineTo(vertices[j].x, vertices[j].y);
-                }
-                
-                ctx.closePath();
-                ctx.fill();
-                ctx.strokeStyle = '#333333';
-                ctx.lineWidth = 1;
-                ctx.stroke();
             }
             
             requestAnimationFrame(render);
