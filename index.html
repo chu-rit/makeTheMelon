@@ -3,481 +3,95 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>수박 게임</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/matter-js/0.19.0/matter.min.js"></script>
-    <style>
-        body {
-            margin: 0;
-            padding: 0;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
-            background-color: #f5f5f5;
-            font-family: 'Arial', sans-serif;
-        }
-        #game-container {
-            position: relative;
-            width: 400px;
-            height: 600px;
-            background-color: #fff;
-            border-radius: 10px;
-            box-shadow: 0 0 20px rgba(0, 0, 0, 0.1);
-            overflow: hidden;
-        }
-        #score {
-            position: absolute;
-            top: 20px;
-            left: 20px;
-            font-size: 24px;
-            font-weight: bold;
-            color: #333;
-            z-index: 10;
-        }
-        .next-fruit {
-            position: absolute;
-            top: 20px;
-            left: 50%;
-            transform: translateX(-50%);
-            font-size: 16px;
-            color: #333;
-            background-color: rgba(255, 255, 255, 0.7);
-            padding: 5px 10px;
-            border-radius: 5px;
-            z-index: 10;
-            text-align: center;
-        }
-        .next-preview {
-            position: absolute;
-            top: 50px;
-            left: 50%;
-            transform: translateX(-50%);
-            width: 40px;
-            height: 40px;
-            background-size: contain;
-            background-repeat: no-repeat;
-            background-position: center;
-            z-index: 10;
-        }
-        .game-over {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            font-size: 48px;
-            font-weight: bold;
-            color: #ff5252;
-            background-color: rgba(255, 255, 255, 0.8);
-            padding: 20px 40px;
-            border-radius: 10px;
-            display: none;
-            z-index: 20;
-        }
-        .drop-line {
-            position: absolute;
-            top: 120px;
-            left: 0;
-            width: 100%;
-            height: 2px;
-            background-color: rgba(0, 0, 0, 0.1);
-            z-index: 5;
-        }
-        #waiting-fruit-container {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            pointer-events: none;
-            z-index: 15;
-        }
-        #waiting-fruit {
-            position: absolute;
-            border-radius: 50%;
-            transform: translate(-50%, -50%);
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            color: white;
-            font-weight: bold;
-            pointer-events: none;
-        }
-        #restart-button {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, 50px);
-            padding: 10px 20px;
-            background-color: #4CAF50;
-            color: white;
-            border: none;
-            border-radius: 5px;
-            font-size: 18px;
-            cursor: pointer;
-            z-index: 30;
-            display: none;
-        }
-        #restart-button:hover {
-            background-color: #45a049;
-        }
-        #special-item {
-            position: absolute;
-            top: 10px;
-            right: 10px;
-            width: 80px;
-            height: 80px;
-            border-radius: 10px;
-            background-color: #555555;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            color: white;
-            font-weight: bold;
-            font-size: 14px;
-            cursor: grab;
-            box-shadow: 0 0 10px rgba(0,0,0,0.5);
-            z-index: 100;
-            text-align: center;
-            user-select: none;
-        }
-        #special-item.dragging {
-            cursor: grabbing;
-            opacity: 0.7;
-        }
-        #cooldown-overlay {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 0%;
-            background-color: rgba(0,0,0,0.7);
-            border-radius: 10px;
-            z-index: 101;
-            display: none;
-        }
-    </style>
+    <title>과일 합치기 게임</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/matter-js/0.18.0/matter.min.js"></script>
+    <link rel="stylesheet" href="styles.css">
 </head>
 <body>
     <div id="game-container">
-        <div id="canvas-container" style="width: 100%; height: 100%; position: absolute;"></div>
-        <div id="score">점수: 0</div>
-        <div class="next-fruit">다음: <span id="next-fruit-name">체리</span></div>
-        <div class="next-preview" id="next-preview"></div>
-        <div class="drop-line"></div>
-        <div class="game-over" id="game-over">게임 오버!</div>
-        <div id="waiting-fruit-container">
-            <div id="waiting-fruit"></div>
+        <div id="score-container">점수: <span id="score">0</span></div>
+        <div id="drop-line"></div>
+        <div id="waiting-fruit"></div>
+        <div id="special-item">무게추 (3/3)</div>
+        <div id="cooldown-overlay"></div>
+        <div id="game-over">
+            <div id="game-over-content">
+                <h2>게임 오버</h2>
+                <p>최종 점수: <span id="final-score">0</span></p>
+                <button id="restart-button">다시 시작</button>
+            </div>
         </div>
-        <button id="restart-button">다시 시작</button>
-        <div id="special-item">무게추<br>준비됨
-            <div id="cooldown-overlay"></div>
-        </div>
+        <canvas id="game-canvas"></canvas>
     </div>
 
+    <script src="variables.js"></script>
+    <script src="fruit.js"></script>
+
     <script>
-        // 물리 엔진 설정
-        const Engine = Matter.Engine,
-              Render = Matter.Render,
-              Runner = Matter.Runner,
-              Bodies = Matter.Bodies,
-              Body = Matter.Body,
-              Events = Matter.Events,
-              World = Matter.World,
-              Composite = Matter.Composite,
-              Vector = Matter.Vector; // Vector 모듈 추가
-
-        // 게임 설정
-        const FRUITS = [
-            { name: '체리', radius: 25, color: '#FF0000', number: 1, weight: 0.001 },
-            { name: '딸기', radius: 35, color: '#FF3366', number: 2, weight: 0.0015 },
-            { name: '포도', radius: 45, color: '#9400D3', number: 3, weight: 0.002 },
-            { name: '오렌지', radius: 55, color: '#FFA500', number: 4, weight: 0.0025 },
-            { name: '감', radius: 65, color: '#FF8C00', number: 5, weight: 0.003 },
-            { name: '사과', radius: 75, color: '#FF6347', number: 6, weight: 0.0035 },
-            { name: '배', radius: 85, color: '#ADFF2F', number: 7, weight: 0.004 },
-            { name: '복숭아', radius: 95, color: '#FFC0CB', number: 8, weight: 0.0045 },
-            { name: '파인애플', radius: 105, color: '#FFD700', number: 9, weight: 0.005 },
-            { name: '메론', radius: 115, color: '#32CD32', number: 10, weight: 0.0055 },
-            { name: '수박', radius: 125, color: '#008000', number: 11, weight: 0.006 }
-        ];
-
-        const container = document.getElementById('game-container');
-        const canvasContainer = document.getElementById('canvas-container');
-        const waitingFruitElement = document.getElementById('waiting-fruit');
-        const containerWidth = container.clientWidth;
-        const containerHeight = container.clientHeight;
-        let score = 0;
-        let nextFruitIndex = 0; // 항상 체리(인덱스 0)만 선택
-        let currentFruit = null;
-        let canDropFruit = true;
-        let isGameOver = false;
-        let waitingFruitNumber = Math.floor(Math.random() * 9) + 1; // 대기 중인 과일의 숫자를 저장할 변수
-        let mouseX = containerWidth / 2;
-
-        // 특수 아이템 설정
-        const SPECIAL_WEIGHT = {
-            name: '무게추',
-            width: 140,  // 너비
-            height: 140, // 높이
-            color: '#555555',
-            weight: 0.5, // 무게 증가 (0.2 -> 0.5)
-            cooldown: 15000, // 15초 쿨다운
-            available: true,
-            initialVelocity: 15 // 초기 속도 감소 (25 -> 15)
+        // 게임 시작
+        window.onload = function() {
+            initGame();
+            
+            // 과일 라벨 업데이트 간격 설정
+            setInterval(() => {
+                updateFruitLabels(); // 라벨 업데이트
+                checkFruitMerging(); // 과일 합치기 검사
+            }, 1000 / 60); // 약 60fps
+            
+            // 게임오버 체크 간격 설정
+            setInterval(() => {
+                checkGameOver();
+            }, 1000);
         };
-
-        // 특수 아이템 UI 요소
-        const specialItemUI = document.getElementById('special-item');
-        const cooldownOverlay = document.getElementById('cooldown-overlay');
-
-        // 엔진 생성
-        const engine = Engine.create({
-            enableSleeping: true, // 움직임이 없는 물체는 '잠자기' 상태로 전환하여 성능 향상
-            constraintIterations: 8, // 제약 조건 반복 횟수 증가
-            positionIterations: 14, // 위치 계산 반복 횟수 증가
-            velocityIterations: 14, // 속도 계산 반복 횟수 증가
-        });
-        engine.world.gravity.y = 2.0; // 중력 증가
-
-        // 물리 엔진 설정 추가 - 정적 마찰력 임계값 조정
-        engine.timing.timeScale = 1.0;
-        engine.positionIterations = 14;
-        engine.velocityIterations = 14;
-
-        // 렌더러 생성
-        const render = Render.create({
-            element: canvasContainer,
-            engine: engine,
-            options: {
-                width: containerWidth,
-                height: containerHeight,
-                wireframes: false,
-                background: '#fff',
-                pixelRatio: window.devicePixelRatio,
-                showSleeping: false,
-                showDebug: false,
-                showBroadphase: false,
-                showBounds: false,
-                showVelocity: false,
-                showCollisions: false,
-                showSeparations: false,
-                showAxes: false,
-                showPositions: false,
-                showAngleIndicator: false,
-                showIds: false,
-                showShadows: false,
-                showVertexNumbers: false,
-                showConvexHulls: false,
-                showInternalEdges: false,
-                showMousePosition: false
-            }
-        });
-
-        // 벽 생성
-        const wallOptions = {
-            isStatic: true,
-            render: {
-                visible: true,
-                fillStyle: 'transparent',
-                strokeStyle: '#333',
-                lineWidth: 1
-            }
-        };
-
-        const ground = Bodies.rectangle(containerWidth / 2, containerHeight, containerWidth, 20, {
-            ...wallOptions,
-            render: {
-                ...wallOptions.render,
-                fillStyle: '#f0f0f0'
-            }
-        });
-        const leftWall = Bodies.rectangle(0, containerHeight / 2, 10, containerHeight, wallOptions);
-        const rightWall = Bodies.rectangle(containerWidth, containerHeight / 2, 10, containerHeight, wallOptions);
-
-        World.add(engine.world, [ground, leftWall, rightWall]);
-
-        // 렌더러 실행
-        Render.run(render);
-        const runner = Runner.create();
-        Runner.run(runner, engine);
-
-        // 다음 과일 표시 업데이트
-        function updateNextFruit() {
-            nextFruitIndex = 0; // 항상 체리(인덱스 0)만 선택
-            
-            // 1~5는 66%, 6~9는 34%의 확률로 생성
-            const randomValue = Math.random();
-            if (randomValue < 0.66) {
-                // 66% 확률로 1~5 사이의 숫자 생성
-                waitingFruitNumber = Math.floor(Math.random() * 5) + 1;
-            } else {
-                // 34% 확률로 6~9 사이의 숫자 생성
-                waitingFruitNumber = Math.floor(Math.random() * 4) + 6;
-            }
-            
-            // document.getElementById('next-fruit-name').textContent = FRUITS[nextFruitIndex].name;
-            // const nextPreview = document.getElementById('next-preview');
-            // nextPreview.style.width = `${FRUITS[nextFruitIndex].radius * 1.5}px`;
-            // nextPreview.style.height = `${FRUITS[nextFruitIndex].radius * 1.5}px`;
-            // nextPreview.style.backgroundColor = FRUITS[nextFruitIndex].color;
-            // nextPreview.style.borderRadius = '50%';
-            
-            // 대기 중인 과일 업데이트
-            updateWaitingFruit();
-        }
         
-        // 대기 중인 과일 업데이트 (HTML 요소)
-        function updateWaitingFruit() {
-            const fruit = FRUITS[nextFruitIndex];
-            
-            // 대기 중인 과일 스타일 설정
-            waitingFruitElement.style.width = `${fruit.radius * 2}px`;
-            waitingFruitElement.style.height = `${fruit.radius * 2}px`;
-            waitingFruitElement.style.backgroundColor = fruit.color;
-            waitingFruitElement.style.fontSize = `${fruit.radius * 0.8}px`;
-            waitingFruitElement.textContent = waitingFruitNumber; // 저장된 숫자 사용
-            waitingFruitElement.style.left = `${mouseX}px`;
-            waitingFruitElement.style.top = '120px';
-            
-            // 대기 중인 과일 표시
-            waitingFruitElement.style.display = canDropFruit ? 'flex' : 'none';
-        }
-
-        // 과일 생성
-        function createFruit(x, y, fruitIndex) {
-            const fruit = FRUITS[fruitIndex];
-            
-            // 랜덤 숫자 할당 (현재 과일이 없으면 대기 중인 과일의 숫자 사용, 있으면 새로운 랜덤 숫자 생성)
-            const randomNumber = (currentFruit === null) ? waitingFruitNumber : Math.floor(Math.random() * 9) + 1;
-            
-            const body = Bodies.circle(x, y, fruit.radius, {
-                restitution: 0.1, // 탄성 감소
-                friction: 20, // 마찰력 증가
-                frictionAir: 0.01, // 공기 마찰력 증가
-                frictionStatic: 0.5, // 정적 마찰력 추가
-                density: fruit.weight, // 과일 무게 사용
-                slop: 0.005, // 물체 간 겹침 허용 오차 감소
-                timeScale: 1.0, // 시간 스케일 정상화
-                render: {
-                    fillStyle: fruit.color,
-                    strokeStyle: fruit.color,
-                    lineWidth: 0
-                },
-                fruitIndex: fruitIndex,
-                number: randomNumber, // 랜덤 숫자 할당
-                id: Date.now() + Math.random() // 고유 ID 할당
+        // 벽 생성
+        function createWalls() {
+            // 바닥
+            const floor = Bodies.rectangle(containerWidth / 2, containerHeight, containerWidth, 50, { 
+                isStatic: true,
+                friction: 0.1
             });
-
-            // 과일 내부에 숫자 표시
-            const text = document.createElement('div');
-            text.style.position = 'absolute';
-            text.style.color = 'white';
-            text.style.fontWeight = 'bold';
-            text.style.fontSize = `${fruit.radius * 0.8}px`;
-            text.style.userSelect = 'none';
-            text.style.pointerEvents = 'none';
-            text.style.textAlign = 'center';
-            text.style.width = `${fruit.radius * 2}px`;
-            text.style.height = `${fruit.radius * 2}px`;
-            text.style.lineHeight = `${fruit.radius * 2}px`;
-            text.textContent = randomNumber; // 랜덤 숫자 할당
-            text.id = `text-${body.id}`;  // 고유 ID 부여
-            container.appendChild(text);
-
-            // 과일 위치에 따라 숫자 위치 업데이트
-            const updateTextPosition = function() {
-                const textElement = document.getElementById(`text-${body.id}`);
-                if (!textElement) {
-                    Events.off(engine, 'afterUpdate', updateTextPosition);
-                    return;
-                }
-                
-                if (body.position) {
-                    textElement.style.left = `${body.position.x - fruit.radius}px`;
-                    textElement.style.top = `${body.position.y - fruit.radius}px`;
-                } else {
-                    textElement.remove();
-                    Events.off(engine, 'afterUpdate', updateTextPosition);
-                }
-            };
-
-            Events.on(engine, 'afterUpdate', updateTextPosition);
             
-            // 과일에 텍스트 ID 저장
-            body.textId = `text-${body.id}`;
+            // 왼쪽 벽
+            const leftWall = Bodies.rectangle(0, containerHeight / 2, 50, containerHeight, { 
+                isStatic: true,
+                friction: 0.1
+            });
             
-            return body;
+            // 오른쪽 벽
+            const rightWall = Bodies.rectangle(containerWidth, containerHeight / 2, 50, containerHeight, { 
+                isStatic: true,
+                friction: 0.1
+            });
+            
+            walls = [floor, leftWall, rightWall];
+            World.add(engine.world, walls);
         }
 
-        // 특수 무게추 생성 함수
+        // 특수 무게추 생성
         function createSpecialWeight(x, y) {
             const body = Bodies.rectangle(x, y, SPECIAL_WEIGHT.width, SPECIAL_WEIGHT.height, {
-                restitution: 0.2, // 탄성 증가 (0.05 -> 0.2)
-                friction: 0.1, // 마찰력 감소 (30 -> 0.1)
-                frictionAir: 0.001, // 공기 마찰력 감소 (0.02 -> 0.001)
-                frictionStatic: 0.5, // 정적 마찰력 감소 (1.0 -> 0.5)
-                density: SPECIAL_WEIGHT.weight, // 매우 무거운 무게
-                slop: 0.05, // 물체 간 겹침 허용 오차 증가 (0.002 -> 0.05)
-                timeScale: 1.2, // 시간 스케일 증가 (1.0 -> 1.2)
-                render: {
-                    fillStyle: SPECIAL_WEIGHT.color,
-                    strokeStyle: SPECIAL_WEIGHT.color,
-                    lineWidth: 0
-                },
-                isSpecialWeight: true, // 특수 아이템 식별자
-                id: Date.now() + Math.random() // 고유 ID 할당
+                restitution: 0.2,
+                friction: 0.1,
+                frictionAir: 0.03,
+                frictionStatic: 0.5,
+                density: SPECIAL_WEIGHT.weight
             });
-
-            // 무게추 텍스트 표시
-            const text = document.createElement('div');
-            text.style.position = 'absolute';
-            text.style.color = 'white';
-            text.style.fontWeight = 'bold';
-            text.style.fontSize = `${SPECIAL_WEIGHT.height * 0.6}px`;
-            text.style.userSelect = 'none';
-            text.style.pointerEvents = 'none';
-            text.style.textAlign = 'center';
-            text.style.width = `${SPECIAL_WEIGHT.width}px`;
-            text.style.height = `${SPECIAL_WEIGHT.height}px`;
-            text.style.lineHeight = `${SPECIAL_WEIGHT.height}px`;
-            text.textContent = '⚓'; // 무게추 아이콘
-            text.id = `text-${body.id}`;
-            container.appendChild(text);
-
-            // 무게추 위치에 따라 텍스트 위치 업데이트
-            const updateTextPosition = function() {
-                const textElement = document.getElementById(`text-${body.id}`);
-                if (!textElement) {
-                    Events.off(engine, 'afterUpdate', updateTextPosition);
-                    return;
-                }
-                
-                if (body.position) {
-                    textElement.style.left = `${body.position.x - SPECIAL_WEIGHT.width / 2}px`;
-                    textElement.style.top = `${body.position.y - SPECIAL_WEIGHT.height / 2}px`;
-                } else {
-                    textElement.remove();
-                    Events.off(engine, 'afterUpdate', updateTextPosition);
-                }
-            };
-
-            Events.on(engine, 'afterUpdate', updateTextPosition);
-            body.textId = `text-${body.id}`;
+            
+            body.isWeight = true;
+            
+            // 초기 속도 설정
+            Body.setVelocity(body, { x: 0, y: SPECIAL_WEIGHT.initialVelocity });
+            
+            World.add(engine.world, body);
+            weights.push(body);
             
             return body;
         }
 
-        // 특수 무게추 드롭 함수
-        function dropSpecialWeight(x, y) {
-            if (!SPECIAL_WEIGHT.available || isGameOver) return;
-
-            const weight = createSpecialWeight(x, y);
-            
-            // 초기 속도 설정 - 강하게 떨어지도록
-            Body.setVelocity(weight, { x: 0, y: SPECIAL_WEIGHT.initialVelocity });
-            
-            // 무게추에 충격 효과 추가
-            weight.onCollide = function(event) {
+        // 충돌 이벤트 설정
+        function setupCollisionEvents() {
+            Events.on(engine, 'collisionStart', (event) => {
                 const pairs = event.pairs;
                 
                 for (let i = 0; i < pairs.length; i++) {
@@ -485,670 +99,388 @@
                     const bodyA = pair.bodyA;
                     const bodyB = pair.bodyB;
                     
-                    // 무게추가 과일과 충돌했을 때 과일에 추가 힘 적용
-                    if (bodyA.id === weight.id && bodyB.fruitIndex !== undefined) {
-                        // 충돌 방향으로 강한 힘 적용
-                        const force = Vector.mult(
-                            Vector.normalise(Vector.sub(bodyB.position, bodyA.position)),
-                            0.05 * bodyB.mass // 과일 질량에 비례한 힘
-                        );
-                        Body.applyForce(bodyB, bodyB.position, force);
-                    } 
-                    else if (bodyB.id === weight.id && bodyA.fruitIndex !== undefined) {
-                        const force = Vector.mult(
-                            Vector.normalise(Vector.sub(bodyA.position, bodyB.position)),
-                            0.05 * bodyA.mass
-                        );
-                        Body.applyForce(bodyA, bodyA.position, force);
-                    }
-                }
-            };
-            
-            // 충돌 이벤트 리스너 등록
-            Events.on(engine, 'collisionStart', weight.onCollide);
-            
-            World.add(engine.world, weight);
-            
-            // 쿨다운 시작
-            SPECIAL_WEIGHT.available = false;
-            specialItemUI.style.opacity = '0.5';
-            specialItemUI.textContent = '충전 중';
-            
-            // 쿨다운 애니메이션
-            cooldownOverlay.style.display = 'block';
-            cooldownOverlay.style.height = '100%';
-            
-            // 쿨다운 애니메이션
-            let cooldownTime = SPECIAL_WEIGHT.cooldown;
-            const startTime = Date.now();
-            
-            const updateCooldown = function() {
-                const elapsed = Date.now() - startTime;
-                const remaining = Math.max(0, cooldownTime - elapsed);
-                const progress = (remaining / cooldownTime) * 100;
-                
-                cooldownOverlay.style.height = `${progress}%`;
-                
-                if (remaining > 0) {
-                    requestAnimationFrame(updateCooldown);
-                } else {
-                    // 쿨다운 완료
-                    SPECIAL_WEIGHT.available = true;
-                    specialItemUI.style.opacity = '1';
-                    specialItemUI.textContent = '무게추\n준비됨';
-                    cooldownOverlay.style.display = 'none';
-                }
-            };
-            
-            updateCooldown();
-        }
-
-        // 과일 드롭
-        function dropFruit(x) {
-            if (!canDropFruit || isGameOver) return;
-
-            canDropFruit = false;
-            
-            // 대기 중인 과일 숨기기
-            waitingFruitElement.style.display = 'none';
-            
-            // 실제 물리 효과가 있는 과일 생성
-            currentFruit = createFruit(x, 120, nextFruitIndex);
-            World.add(engine.world, currentFruit);
-
-            // 다음 과일 준비
-            nextFruitIndex = 0; // 항상 체리(인덱스 0)만 선택
-            
-            // 일정 시간 후 다음 과일 드롭 가능
-            setTimeout(() => {
-                canDropFruit = true;
-                currentFruit = null;
-                
-                // 다음 과일 표시 업데이트
-                updateNextFruit();
-            }, 500);
-        }
-
-        // 마우스 이벤트
-        document.addEventListener('mousemove', function(e) {
-            // 마우스 위치 계산 및 제한
-            const rect = container.getBoundingClientRect();
-            if (e.clientX >= rect.left && e.clientX <= rect.right) {
-                mouseX = e.clientX - rect.left;
-                mouseX = Math.max(40, Math.min(mouseX, containerWidth - 40));
-                
-                // 대기 중인 과일 위치 업데이트
-                if (canDropFruit) {
-                    updateWaitingFruit();
-                }
-                
-                // 다음 과일 미리보기 위치 업데이트 (가로 위치만)
-                const nextPreview = document.getElementById('next-preview');
-                if (nextPreview) {
-                    const width = parseInt(nextPreview.style.width || '0');
-                    nextPreview.style.left = `${mouseX - width / 2}px`;
-                }
-            }
-        });
-
-        // 터치 이벤트 추가
-        document.addEventListener('touchmove', function(e) {
-            // 스크롤 방지
-            e.preventDefault();
-            
-            // 터치 위치 계산 및 제한
-            if (e.touches && e.touches[0]) {
-                const touch = e.touches[0];
-                const rect = container.getBoundingClientRect();
-                
-                if (touch.clientX >= rect.left && touch.clientX <= rect.right) {
-                    mouseX = touch.clientX - rect.left;
-                    mouseX = Math.max(40, Math.min(mouseX, containerWidth - 40));
+                    // 충돌 힘 계산
+                    const collisionForce = Math.abs(bodyA.force.x) + Math.abs(bodyA.force.y) + Math.abs(bodyB.force.x) + Math.abs(bodyB.force.y);
                     
-                    // 대기 중인 과일 위치 업데이트
-                    if (canDropFruit) {
-                        updateWaitingFruit();
+                    // 충돌 힘 임계값보다 작은 충돌은 무시
+                    if (collisionForce < MIN_COLLISION_FORCE) {
+                        continue;
                     }
                     
-                    // 다음 과일 미리보기 위치 업데이트 (가로 위치만)
-                    const nextPreview = document.getElementById('next-preview');
-                    if (nextPreview) {
-                        const width = parseInt(nextPreview.style.width || '0');
-                        nextPreview.style.left = `${mouseX - width / 2}px`;
-                    }
-                }
-            }
-        }, { passive: false });
-
-        container.addEventListener('click', function(e) {
-            if (canDropFruit) {
-                dropFruit(mouseX);
-            }
-        });
-
-        // 터치 이벤트로 과일 드롭
-        container.addEventListener('touchend', function(e) {
-            if (canDropFruit) {
-                dropFruit(mouseX);
-            }
-        });
-
-        // 키보드 이벤트 추가 (스페이스바로 특수 무게추 사용)
-        document.addEventListener('keydown', function(e) {
-            if (e.code === 'Space' && SPECIAL_WEIGHT.available) {
-                dropSpecialWeight(mouseX, 120);
-                e.preventDefault(); // 페이지 스크롤 방지
-            }
-        });
-        
-        // 특수 아이템 드래그 앤 드롭 구현
-        let isDragging = false;
-        let dragOffsetX = 0;
-        let dragOffsetY = 0;
-        let dragClone = null;
-        
-        // 마우스 드래그 시작
-        specialItemUI.addEventListener('mousedown', function(e) {
-            if (!SPECIAL_WEIGHT.available || isGameOver) return;
-            
-            isDragging = true;
-            specialItemUI.classList.add('dragging');
-            
-            // 드래그 오프셋 계산 (클릭 위치와 버튼 위치의 차이)
-            const rect = specialItemUI.getBoundingClientRect();
-            dragOffsetX = e.clientX - rect.left;
-            dragOffsetY = e.clientY - rect.top;
-            
-            // 드래그 중인 아이템 복제본 생성
-            createDragClone('⚓', e.clientX, e.clientY);
-            
-            e.preventDefault();
-        });
-        
-        // 터치 드래그 시작
-        specialItemUI.addEventListener('touchstart', function(e) {
-            if (!SPECIAL_WEIGHT.available || isGameOver) return;
-            
-            isDragging = true;
-            specialItemUI.classList.add('dragging');
-            
-            // 터치 위치 가져오기
-            const touch = e.touches[0];
-            
-            // 드래그 오프셋 계산 (터치 위치와 버튼 위치의 차이)
-            const rect = specialItemUI.getBoundingClientRect();
-            dragOffsetX = touch.clientX - rect.left;
-            dragOffsetY = touch.clientY - rect.top;
-            
-            // 드래그 중인 아이템 복제본 생성
-            createDragClone('⚓', touch.clientX, touch.clientY);
-            
-            e.preventDefault();
-        });
-        
-        // 드래그 복제본 생성 함수
-        function createDragClone(text, x, y) {
-            dragClone = document.createElement('div');
-            dragClone.style.position = 'absolute';
-            dragClone.style.width = '80px';
-            dragClone.style.height = '80px';
-            dragClone.style.borderRadius = '10px';
-            dragClone.style.backgroundColor = '#555555';
-            dragClone.style.display = 'flex';
-            dragClone.style.justifyContent = 'center';
-            dragClone.style.alignItems = 'center';
-            dragClone.style.color = 'white';
-            dragClone.style.fontWeight = 'bold';
-            dragClone.style.fontSize = '14px';
-            dragClone.style.zIndex = '1000';
-            dragClone.style.pointerEvents = 'none';
-            dragClone.style.opacity = '0.7';
-            dragClone.style.textAlign = 'center';
-            dragClone.textContent = text;
-            document.body.appendChild(dragClone);
-            
-            // 초기 위치 설정
-            dragClone.style.left = (x - dragOffsetX) + 'px';
-            dragClone.style.top = (y - dragOffsetY) + 'px';
-        }
-        
-        // 마우스 드래그 중
-        document.addEventListener('mousemove', function(e) {
-            if (!isDragging) return;
-            
-            // 드래그 중인 아이템 위치 업데이트
-            dragClone.style.left = (e.clientX - dragOffsetX) + 'px';
-            dragClone.style.top = (e.clientY - dragOffsetY) + 'px';
-            
-            e.preventDefault();
-        });
-        
-        // 터치 드래그 중
-        document.addEventListener('touchmove', function(e) {
-            if (!isDragging) return;
-            
-            // 터치 위치 가져오기
-            const touch = e.touches[0];
-            
-            // 드래그 중인 아이템 위치 업데이트
-            dragClone.style.left = (touch.clientX - dragOffsetX) + 'px';
-            dragClone.style.top = (touch.clientY - dragOffsetY) + 'px';
-            
-            e.preventDefault();
-        });
-        
-        // 마우스 드래그 종료
-        document.addEventListener('mouseup', function(e) {
-            if (!isDragging) return;
-            
-            finishDrag(e.clientX, e.clientY);
-        });
-        
-        // 터치 드래그 종료
-        document.addEventListener('touchend', function(e) {
-            if (!isDragging) return;
-            
-            // 마지막 터치 위치 가져오기
-            const touch = e.changedTouches[0];
-            finishDrag(touch.clientX, touch.clientY);
-        });
-        
-        // 드래그 종료 처리 함수
-        function finishDrag(clientX, clientY) {
-            isDragging = false;
-            specialItemUI.classList.remove('dragging');
-            
-            // 게임 영역 내에 드롭되었는지 확인
-            const gameRect = container.getBoundingClientRect();
-            if (
-                clientX >= gameRect.left && 
-                clientX <= gameRect.right && 
-                clientY >= gameRect.top && 
-                clientY <= gameRect.bottom
-            ) {
-                // 게임 영역 내 상대 좌표 계산
-                const x = clientX - gameRect.left;
-                const y = clientY - gameRect.top;
-                
-                // 무게추 드롭
-                dropSpecialWeight(x, y);
-            }
-            
-            // 드래그 복제본 제거
-            if (dragClone) {
-                dragClone.remove();
-                dragClone = null;
-            }
-        }
-        
-        // 드래그 취소 (마우스가 창 밖으로 나갔을 때)
-        document.addEventListener('mouseleave', function() {
-            if (isDragging) {
-                isDragging = false;
-                specialItemUI.classList.remove('dragging');
-                
-                if (dragClone) {
-                    dragClone.remove();
-                    dragClone = null;
-                }
-            }
-        });
-
-        // 주기적으로 모든 과일 그룹 확인 (0.1초마다)
-        setInterval(checkFruitGroups, 100);
-        
-        // 충돌 이벤트 감지
-        Events.on(engine, 'collisionStart', function(event) {
-            if (isGameOver) return;
-            
-            // 충돌이 발생하면 즉시 과일 그룹 확인
-            checkFruitGroups();
-        });
-        
-        // 과일 그룹 확인 및 합치기 함수
-        function checkFruitGroups() {
-            if (isGameOver) return;
-            
-            // 모든 과일 가져오기
-            const bodies = Composite.allBodies(engine.world);
-            const fruits = bodies.filter(body => body.fruitIndex !== undefined);
-            
-            // 과일이 2개 미만이면 처리할 필요 없음
-            if (fruits.length < 2) return;
-            
-            // 모든 과일 그룹 찾기
-            const allGroups = findAllFruitGroups(fruits);
-            
-            // 각 그룹 내에서 같은 과일 종류의 숫자 합이 10인 과일 찾기
-            let mergedAny = false;
-            
-            allGroups.forEach(group => {
-                if (group.length > 1) {
-                    // 같은 종류의 과일끼리 그룹화
-                    const fruitTypeGroups = {};
-                    
-                    group.forEach(fruit => {
-                        const key = `${fruit.fruitIndex}`;
-                        if (!fruitTypeGroups[key]) {
-                            fruitTypeGroups[key] = [];
-                        }
-                        fruitTypeGroups[key].push(fruit);
-                    });
-                    
-                    // 같은 종류의 과일 중 합이 10인 그룹 찾기
-                    for (const key in fruitTypeGroups) {
-                        const sameTypeGroup = fruitTypeGroups[key];
-                        if (sameTypeGroup.length >= 2) {
-                            // 모든 가능한 부분 그룹 찾기
-                            const subgroups = findSubgroupsWithSum10(sameTypeGroup);
+                    // 과일끼리 충돌
+                    if (bodyA.isFruit && bodyB.isFruit) {
+                        // 같은 종류의 과일이고 합이 10인 경우
+                        if (bodyA.fruitIndex === bodyB.fruitIndex && 
+                            bodyA.fruitNumber + bodyB.fruitNumber === 10 && 
+                            bodyA.fruitIndex < FRUITS.length - 1 && 
+                            !bodyA.cooldown && !bodyB.cooldown) {
                             
-                            // 이미 처리된 과일 추적
-                            const processedFruits = new Set();
+                            // 중간 위치 계산
+                            const midX = (bodyA.position.x + bodyB.position.x) / 2;
+                            const midY = (bodyA.position.y + bodyB.position.y) / 2;
                             
-                            // 부분 그룹 합치기 (가장 큰 부분 그룹부터)
-                            subgroups.sort((a, b) => b.length - a.length);
+                            // 기존 과일 라벨 제거
+                            removeFruitLabel(bodyA);
+                            removeFruitLabel(bodyB);
                             
-                            for (const subgroup of subgroups) {
-                                // 이미 처리된 과일이 있는지 확인
-                                const alreadyProcessed = subgroup.some(fruit => processedFruits.has(fruit.id));
-                                if (alreadyProcessed) continue;
-                                
-                                // 디버깅: 부분 그룹 정보 출력
-                                const fruitType = FRUITS[subgroup[0].fruitIndex].name;
-                                const subNumbers = subgroup.map(fruit => fruit.number).join('+');
-                                console.log(`같은 종류(${fruitType})의 과일 중 합이 10인 그룹 발견: ${subNumbers} = 10`);
-                                
-                                // 부분 그룹 합치기
-                                mergeFruits(subgroup);
-                                mergedAny = true;
-                                
-                                // 처리된 과일 표시
-                                subgroup.forEach(fruit => processedFruits.add(fruit.id));
+                            // 기존 과일 제거
+                            removeBody(bodyA);
+                            removeBody(bodyB);
+                            
+                            // 다음 단계 과일 생성
+                            const newFruitIndex = bodyA.fruitIndex + 1;
+                            
+                            // 랜덤 숫자 생성 (기존 확률 분포 사용)
+                            let randomNumber;
+                            const rand = Math.random();
+                            
+                            if (rand < 0.50) { // 50% 확률로 1-3 사이
+                                randomNumber = Math.floor(Math.random() * 3) + 1;
+                            } else if (rand < 0.80) { // 30% 확률로 4-5 사이
+                                randomNumber = Math.floor(Math.random() * 2) + 4;
+                            } else if (rand < 0.95) { // 15% 확률로 6-7 사이
+                                randomNumber = Math.floor(Math.random() * 2) + 6;
+                            } else { // 5% 확률로 8-9 사이
+                                randomNumber = Math.floor(Math.random() * 2) + 8;
                             }
+                            
+                            // 새 과일 생성
+                            const newFruit = createFruit(midX, midY, newFruitIndex);
+                            
+                            // 생성된 과일에 랜덤 숫자 할당
+                            newFruit.fruitNumber = randomNumber;
+                            
+                            // 기존 과일 라벨 제거 후 새로 생성
+                            removeFruitLabel(newFruit);
+                            createFruitLabel(newFruit, randomNumber);
+                            
+                            // 쿨타임 설정 - 0.5초 동안 합치기 불가능
+                            newFruit.cooldown = true;
+                            setTimeout(() => {
+                                newFruit.cooldown = false;
+                            }, 500);
+                            
+                            // 점수 추가
+                            score += FRUITS[newFruitIndex].score;
+                            document.getElementById('score').textContent = score;
                         }
                     }
+                    
+                    // 무게추와 과일 충돌
+                    if ((bodyA.isWeight && bodyB.isFruit) || (bodyA.isFruit && bodyB.isWeight)) {
+                        const fruit = bodyA.isFruit ? bodyA : bodyB;
+                        
+                        // 과일에 추가 힘 적용
+                        const forceMagnitude = 0.01 * fruit.mass;
+                        Body.applyForce(fruit, fruit.position, {
+                            x: (Math.random() - 0.5) * forceMagnitude,
+                            y: -forceMagnitude
+                        });
+                    }
                 }
             });
-            
-            // 과일이 합쳐졌으면 다시 검사 (연쇄 반응을 위해)
-            if (mergedAny) {
-                setTimeout(checkFruitGroups, 100);
-            }
-        }
-        
-        // 그룹 내에서 합이 10이 되는 부분 그룹 찾기
-        function findSubgroupsWithSum10(group) {
-            const subgroups = [];
-            
-            // 모든 과일 쌍에 대해 접촉 여부 확인
-            const adjacencyMatrix = Array(group.length).fill().map(() => Array(group.length).fill(false));
-            
-            for (let i = 0; i < group.length; i++) {
-                for (let j = i + 1; j < group.length; j++) {
-                    if (areFruitsTouching(group[i], group[j])) {
-                        adjacencyMatrix[i][j] = true;
-                        adjacencyMatrix[j][i] = true;
-                    }
-                }
-            }
-            
-            // 모든 가능한 부분 그룹 찾기
-            const findConnectedSubgroups = (startIdx, visited = new Set(), currentGroup = []) => {
-                visited.add(startIdx);
-                currentGroup.push(group[startIdx]);
-                
-                // 현재 부분 그룹의 합 계산
-                const sum = currentGroup.reduce((total, fruit) => total + fruit.number, 0);
-                
-                // 합이 10이면 부분 그룹 추가
-                if (sum === 10) {
-                    subgroups.push([...currentGroup]);
-                }
-                
-                // 합이 10보다 작으면 계속 탐색
-                if (sum < 10) {
-                    for (let i = 0; i < group.length; i++) {
-                        if (!visited.has(i) && adjacencyMatrix[startIdx][i]) {
-                            findConnectedSubgroups(i, new Set([...visited]), [...currentGroup]);
-                        }
-                    }
-                }
-            };
-            
-            // 모든 과일에서 시작하여 부분 그룹 찾기
-            for (let i = 0; i < group.length; i++) {
-                findConnectedSubgroups(i, new Set(), []);
-            }
-            
-            // 중복 제거 (동일한 과일 조합은 하나만 유지)
-            const uniqueSubgroups = [];
-            const seen = new Set();
-            
-            for (const subgroup of subgroups) {
-                // 과일 ID를 정렬하여 고유 키 생성
-                const key = subgroup.map(fruit => fruit.id).sort().join(',');
-                if (!seen.has(key)) {
-                    seen.add(key);
-                    uniqueSubgroups.push(subgroup);
-                }
-            }
-            
-            return uniqueSubgroups;
-        }
-        
-        // 모든 과일 그룹 찾기 함수
-        function findAllFruitGroups(fruits) {
-            // 과일 간의 접촉 여부를 저장하는 인접 행렬
-            const adjacencyMatrix = Array(fruits.length).fill().map(() => Array(fruits.length).fill(false));
-            
-            // 모든 과일 쌍에 대해 접촉 여부 확인
-            for (let i = 0; i < fruits.length; i++) {
-                for (let j = i + 1; j < fruits.length; j++) {
-                    if (areFruitsTouching(fruits[i], fruits[j])) {
-                        adjacencyMatrix[i][j] = true;
-                        adjacencyMatrix[j][i] = true;
-                    }
-                }
-            }
-            
-            // 방문 여부 추적
-            const visited = Array(fruits.length).fill(false);
-            const allGroups = [];
-            
-            // 모든 과일에 대해 연결된 그룹 찾기
-            for (let i = 0; i < fruits.length; i++) {
-                if (!visited[i]) {
-                    const group = [];
-                    dfs(i, visited, adjacencyMatrix, fruits, group);
-                    if (group.length > 0) {
-                        allGroups.push(group);
-                    }
-                }
-            }
-            
-            return allGroups;
-        }
-        
-        // DFS로 연결된 과일 그룹 찾기
-        function dfs(index, visited, adjacencyMatrix, fruits, group) {
-            visited[index] = true;
-            group.push(fruits[index]);
-            
-            for (let i = 0; i < fruits.length; i++) {
-                if (adjacencyMatrix[index][i] && !visited[i]) {
-                    dfs(i, visited, adjacencyMatrix, fruits, group);
-                }
-            }
-        }
-        
-        // 두 과일이 접촉 중인지 확인
-        function areFruitsTouching(fruitA, fruitB) {
-            const dx = fruitB.position.x - fruitA.position.x;
-            const dy = fruitB.position.y - fruitA.position.y;
-            const distance = Math.sqrt(dx * dx + dy * dy);
-            
-            // 두 과일의 반지름 합
-            const radiusSum = FRUITS[fruitA.fruitIndex].radius + FRUITS[fruitB.fruitIndex].radius;
-            
-            // 거리가 반지름 합보다 작거나 같으면 접촉 중
-            return distance <= radiusSum + 5; // 5픽셀 여유 추가
-        }
-        
-        // 과일 합치기 함수
-        function mergeFruits(group) {
-            // 그룹의 중심 위치 계산
-            let centerX = 0;
-            let centerY = 0;
-            group.forEach(fruit => {
-                centerX += fruit.position.x;
-                centerY += fruit.position.y;
-            });
-            centerX /= group.length;
-            centerY /= group.length;
-            
-            // 텍스트 요소 제거
-            group.forEach(fruit => {
-                if (fruit.textId) {
-                    const text = document.getElementById(fruit.textId);
-                    if (text) text.remove();
-                }
-                
-                // 과일 제거
-                World.remove(engine.world, fruit);
-            });
-            
-            // 현재 과일보다 한 단계 큰 과일 생성
-            const currentFruitIndex = group[0].fruitIndex;
-            const nextFruitIndex = Math.min(currentFruitIndex + 1, FRUITS.length - 1);
-            const newFruit = createFruit(centerX, centerY, nextFruitIndex);
-            World.add(engine.world, newFruit);
-            
-            // 점수 업데이트
-            const bonusScore = 100 + (group.length * 10); // 기본 100점 + 과일당 10점
-            score += bonusScore;
-            document.getElementById('score').textContent = `점수: ${score}`;
-            
-            // 합쳐진 과일 로그
-            console.log(`과일 합치기 완료! 보너스 점수: ${bonusScore}`);
         }
 
-        // 게임 오버 체크
-        Events.on(engine, 'afterUpdate', function() {
+        // 바디 제거
+        function removeBody(body) {
+            World.remove(engine.world, body);
+            
+            if (body.isFruit) {
+                const index = fruits.indexOf(body);
+                if (index > -1) {
+                    fruits.splice(index, 1);
+                }
+            } else if (body.isWeight) {
+                const index = weights.indexOf(body);
+                if (index > -1) {
+                    weights.splice(index, 1);
+                }
+            }
+        }
+
+        // 특수 무게추 드롭
+        function dropSpecialWeight(x, y) {
+            if (!SPECIAL_WEIGHT.available || SPECIAL_WEIGHT.remainingUses <= 0) return;
+            
+            createSpecialWeight(x, y);
+            
+            SPECIAL_WEIGHT.remainingUses--;
+            specialItemUI.textContent = `무게추 (${SPECIAL_WEIGHT.remainingUses}/${SPECIAL_WEIGHT.maxUses})`;
+            
+            if (SPECIAL_WEIGHT.remainingUses === 0) {
+                specialItemUI.style.opacity = '0.5';
+            }
+        }
+
+        // 이벤트 리스너 설정
+        function setupEventListeners() {
+            // 마우스 이동
+            container.addEventListener('mousemove', (e) => {
+                const rect = container.getBoundingClientRect();
+                mouseX = e.clientX - rect.left;
+                
+                if (canDropFruit) {
+                    const fruit = FRUITS[nextFruitIndex];
+                    waitingFruitElement.style.left = `${mouseX - fruit.circleRadius}px`;
+                }
+                
+                if (isDraggingWeight) {
+                    specialItemUI.style.left = `${e.clientX - rect.left - 40}px`;
+                    specialItemUI.style.top = `${e.clientY - rect.top - 40}px`;
+                }
+            });
+            
+            // 클릭
+            container.addEventListener('click', (e) => {
+                if (!isDraggingWeight) {
+                    dropFruit();
+                }
+            });
+            
+            // 무게추 드래그 시작
+            let originalWeightPosition = { top: '20px', right: '20px' };
+            
+            specialItemUI.addEventListener('mousedown', (e) => {
+                if (SPECIAL_WEIGHT.available && SPECIAL_WEIGHT.remainingUses > 0) {
+                    isDraggingWeight = true;
+                    originalWeightPosition = {
+                        top: specialItemUI.style.top,
+                        right: specialItemUI.style.right
+                    };
+                    
+                    specialItemUI.style.right = 'auto';
+                    specialItemUI.style.cursor = 'grabbing';
+                    
+                    const rect = container.getBoundingClientRect();
+                    specialItemUI.style.left = `${e.clientX - rect.left - 40}px`;
+                    specialItemUI.style.top = `${e.clientY - rect.top - 40}px`;
+                    
+                    e.preventDefault();
+                }
+            });
+            
+            // 무게추 드래그 종료
+            document.addEventListener('mouseup', (e) => {
+                if (isDraggingWeight) {
+                    isDraggingWeight = false;
+                    
+                    specialItemUI.style.cursor = 'grab';
+                    
+                    const rect = container.getBoundingClientRect();
+                    const x = e.clientX - rect.left;
+                    const y = e.clientY - rect.top;
+                    
+                    if (x >= 0 && x <= containerWidth && y >= 120 && y <= containerHeight) {
+                        dropSpecialWeight(x, y);
+                        
+                        specialItemUI.style.left = 'auto';
+                        specialItemUI.style.top = originalWeightPosition.top;
+                        specialItemUI.style.right = originalWeightPosition.right;
+                    } else {
+                        specialItemUI.style.left = 'auto';
+                        specialItemUI.style.top = originalWeightPosition.top;
+                        specialItemUI.style.right = originalWeightPosition.right;
+                    }
+                }
+            });
+            
+            // 게임 재시작 버튼
+            document.getElementById('restart-button').addEventListener('click', () => {
+                resetGame();
+            });
+        }
+
+        // 게임오버 체크
+        function checkGameOver() {
             if (isGameOver) return;
             
-            const bodies = Composite.allBodies(engine.world);
-            const fruits = bodies.filter(body => body.fruitIndex !== undefined);
-            
-            // 1. 라인 체크: 과일이 상단 라인을 넘었는지 확인
-            const lineY = 120; // 상단 라인 위치
+            const lineY = 120;
             
             for (let i = 0; i < fruits.length; i++) {
                 const fruit = fruits[i];
                 
-                // 과일이 상단 라인보다 위에 있고, 거의 움직이지 않는 경우
-                // 속도 체크를 더 엄격하게 조정 (0.1 -> 0.5)
-                if (fruit.position.y < lineY && Math.abs(fruit.velocity.y) < 0.5) {
-                    // 과일이 처음 라인을 넘었을 때 타임스탬프 기록
-                    if (!fruit.lineTime) {
-                        fruit.lineTime = Date.now();
-                        // 강제로 속도를 0으로 설정하여 부들거림 방지
-                        Body.setVelocity(fruit, { x: 0, y: 0 });
-                        // 각속도도 0으로 설정
-                        Body.setAngularVelocity(fruit, 0);
-                    } 
-                    // 일정 시간(2초) 이상 라인 위에 있으면 게임 오버 (3초 -> 2초로 단축)
-                    else if (Date.now() - fruit.lineTime > 2000) {
-                        console.log("게임 오버: 과일이 라인 위에 2초 이상 머물러 있음");
-                        // 마지막으로 한번 더 속도 체크
-                        if (Math.abs(fruit.velocity.y) < 1.0) {
-                            isGameOver = true;
-                            document.getElementById('game-over').style.display = 'block';
-                            document.getElementById('restart-button').style.display = 'block';
-                            return;
-                        }
-                    }
-                    // 1초마다 속도를 0으로 강제 설정하여 부들거림 방지
-                    else if (Date.now() - fruit.lineTime > 1000) {
-                        Body.setVelocity(fruit, { x: 0, y: 0 });
-                        Body.setAngularVelocity(fruit, 0);
-                    }
-                } else {
-                    // 라인 아래로 내려가면 타임스탬프 초기화
-                    fruit.lineTime = null;
+                const isSleeping = fruit.speed < 0.1;
+                const isAboveLine = fruit.position.y < lineY;
+                
+                if (isSleeping && isAboveLine) {
+                    gameOver();
+                    return;
                 }
             }
-        });
+        }
 
-        // 게임 초기화 함수
-        function initGame() {
-            // 기존 과일 모두 제거
-            const bodies = Composite.allBodies(engine.world);
-            bodies.forEach(body => {
-                if (body.fruitIndex !== undefined || body.isSpecialWeight === true) {
-                    // 텍스트 요소 제거
-                    if (body.textId) {
-                        const text = document.getElementById(body.textId);
-                        if (text) text.remove();
-                    }
-                    World.remove(engine.world, body);
-                }
-            });
+        // 게임 오버
+        function gameOver() {
+            isGameOver = true;
+            document.getElementById('final-score').textContent = score;
+            document.getElementById('game-over').style.display = 'flex';
             
-            // 점수 초기화
-            score = 0;
-            document.getElementById('score').textContent = `점수: ${score}`;
-            
-            // 게임 오버 상태 초기화
-            isGameOver = false;
+            Runner.stop(runner);
+        }
+
+        // 게임 리셋
+        function resetGame() {
             document.getElementById('game-over').style.display = 'none';
-            document.getElementById('restart-button').style.display = 'none';
             
-            // 대기 과일 초기화
-            nextFruitIndex = 0; // 항상 체리(인덱스 0)만 선택
-            waitingFruitNumber = Math.floor(Math.random() * 9) + 1; // 새로운 대기 과일에 대한 랜덤 숫자 할당
+            score = 0;
+            document.getElementById('score').textContent = score;
+            isGameOver = false;
+            nextFruitIndex = 0;
+            canDropFruit = true;
+            fruits = [];
+            weights = [];
+            SPECIAL_WEIGHT.remainingUses = SPECIAL_WEIGHT.maxUses;
+            specialItemUI.textContent = `무게추 (${SPECIAL_WEIGHT.remainingUses}/${SPECIAL_WEIGHT.maxUses})`;
+            specialItemUI.style.opacity = '1';
+            
+            if (runner.enabled) {
+                Runner.stop(runner);
+            }
+            
+            World.clear(engine.world);
+            Engine.clear(engine);
+            
+            createWalls();
+            setupEventListeners();
+            setupCollisionEvents();
             updateWaitingFruit();
             
-            // 드롭 가능 상태로 설정
-            canDropFruit = true;
-            
-            // 무게추 쿨다운 초기화
-            SPECIAL_WEIGHT.available = true;
-            specialItemUI.style.opacity = '1';
-            specialItemUI.textContent = '무게추\n준비됨';
-            cooldownOverlay.style.display = 'none';
+            Runner.run(runner, engine);
         }
-        
-        // 다시 시작 버튼 이벤트 리스너
-        document.getElementById('restart-button').addEventListener('click', function() {
-            initGame();
-        });
-        
+
         // 게임 초기화
-        initGame();
+        function initGame() {
+            score = 0;
+            document.getElementById('score').textContent = score;
+            isGameOver = false;
+            nextFruitIndex = 0;
+            canDropFruit = true;
+            fruits = [];
+            weights = [];
+            SPECIAL_WEIGHT.remainingUses = SPECIAL_WEIGHT.maxUses;
+            specialItemUI.textContent = `무게추 (${SPECIAL_WEIGHT.remainingUses}/${SPECIAL_WEIGHT.maxUses})`;
+            specialItemUI.style.opacity = '1';
+            
+            createWalls();
+            setupEventListeners();
+            setupCollisionEvents();
+            updateWaitingFruit();
+            
+            Runner.run(runner, engine);
+            render();
+        }
 
-        // 디버깅 메시지
-        console.log('게임 초기화 완료');
-        
-        // 모바일 디바이스에서 확대/축소 방지
-        document.addEventListener('touchstart', function(e) {
-            if (e.touches.length > 1) {
-                e.preventDefault();
+        // 과일들이 서로 접촉 중인지 확인
+        function areFruitsInContact(fruits) {
+            if (fruits.length <= 1) return true;
+            
+            // 모든 과일이 직접 접촉하는지 확인 (그래프 연결 확인)
+            const n = fruits.length;
+            const connected = Array(n).fill().map(() => Array(n).fill(false));
+            
+            // 각 과일 쌍에 대해 접촉 여부 확인
+            for (let i = 0; i < n; i++) {
+                connected[i][i] = true; // 자기 자신과는 연결됨
+                
+                for (let j = i + 1; j < n; j++) {
+                    const dx = fruits[i].position.x - fruits[j].position.x;
+                    const dy = fruits[i].position.y - fruits[j].position.y;
+                    const distance = Math.sqrt(dx * dx + dy * dy);
+                    
+                    const fruitA = FRUITS[fruits[i].fruitIndex];
+                    const fruitB = FRUITS[fruits[j].fruitIndex];
+                    const minDistance = fruitA.circleRadius + fruitB.circleRadius;
+                    
+                    // 접촉 여부 확인 (여유 공간 추가)
+                    if (distance <= minDistance + 5) {
+                        connected[i][j] = connected[j][i] = true;
+                    }
+                }
             }
-        }, { passive: false });
-        
-        // 더블 탭 확대 방지
-        let lastTapTime = 0;
-        document.addEventListener('touchend', function(e) {
-            const currentTime = new Date().getTime();
-            const tapLength = currentTime - lastTapTime;
-            if (tapLength < 500 && tapLength > 0) {
-                e.preventDefault();
+            
+            // 모든 과일이 하나의 연결된 그룹을 형성하는지 확인 (BFS 사용)
+            const visited = Array(n).fill(false);
+            const queue = [0]; // 첫 번째 과일부터 시작
+            visited[0] = true;
+            
+            while (queue.length > 0) {
+                const current = queue.shift();
+                
+                for (let i = 0; i < n; i++) {
+                    if (connected[current][i] && !visited[i]) {
+                        visited[i] = true;
+                        queue.push(i);
+                    }
+                }
             }
-            lastTapTime = currentTime;
-        }, { passive: false });
+            
+            // 모든 과일이 방문되었는지 확인
+            return visited.every(v => v);
+        }
 
-        // 초기화
-        updateNextFruit();
+        // 게임 렌더링
+        function render() {
+            // 캔버스 지우기
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            // 벽 그리기
+            ctx.fillStyle = '#cccccc';
+            for (let i = 0; i < walls.length; i++) {
+                const wall = walls[i];
+                const vertices = wall.vertices;
+                
+                ctx.beginPath();
+                ctx.moveTo(vertices[0].x, vertices[0].y);
+                
+                for (let j = 1; j < vertices.length; j++) {
+                    ctx.lineTo(vertices[j].x, vertices[j].y);
+                }
+                
+                ctx.closePath();
+                ctx.fill();
+            }
+            
+            // 과일 그리기
+            for (let i = 0; i < engine.world.bodies.length; i++) {
+                const body = engine.world.bodies[i];
+                if (body.label === 'fruit') {
+                    const fruitData = FRUITS[body.fruitIndex];
+                    
+                    // 과일 원 그리기
+                    ctx.beginPath();
+                    ctx.arc(body.position.x, body.position.y, fruitData.circleRadius, 0, 2 * Math.PI);
+                    ctx.fillStyle = fruitData.color;
+                    ctx.fill();
+                    ctx.strokeStyle = '#000000';
+                    ctx.lineWidth = 1;
+                    ctx.stroke();
+                    
+                    // 참고: 숫자는 HTML 라벨로 표시하므로 여기서는 그리지 않음
+                }
+            }
+            
+            // 무게추 그리기
+            ctx.fillStyle = SPECIAL_WEIGHT.color;
+            for (let i = 0; i < weights.length; i++) {
+                const weight = weights[i];
+                const vertices = weight.vertices;
+                
+                ctx.beginPath();
+                ctx.moveTo(vertices[0].x, vertices[0].y);
+                
+                for (let j = 1; j < vertices.length; j++) {
+                    ctx.lineTo(vertices[j].x, vertices[j].y);
+                }
+                
+                ctx.closePath();
+                ctx.fill();
+                ctx.strokeStyle = '#333333';
+                ctx.lineWidth = 1;
+                ctx.stroke();
+            }
+            
+            requestAnimationFrame(render);
+        }
     </script>
 </body>
 </html>

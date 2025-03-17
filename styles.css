@@ -1,0 +1,123 @@
+body {
+    margin: 0;
+    padding: 0;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    background-color: #f0f0f0;
+    font-family: Arial, sans-serif;
+}
+
+#game-container {
+    position: relative;
+    width: 400px;
+    height: 600px;
+    background-color: white;
+    border: 2px solid #333;
+    overflow: hidden;
+}
+
+#score-container {
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    font-size: 24px;
+    font-weight: bold;
+    z-index: 10;
+}
+
+#drop-line {
+    position: absolute;
+    top: 120px;
+    left: 0;
+    width: 100%;
+    height: 2px;
+    background-color: red;
+    z-index: 5;
+}
+
+#waiting-fruit {
+    position: absolute;
+    display: none;
+    z-index: 5;
+}
+
+#special-item {
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    width: 80px;
+    height: 80px;
+    background-color: #555;
+    color: white;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    border-radius: 10px;
+    cursor: grab;
+    font-size: 14px;
+    text-align: center;
+    z-index: 10;
+}
+
+#cooldown-overlay {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 100%;
+    height: 0%;
+    background-color: rgba(0, 0, 0, 0.5);
+    border-radius: 10px;
+    z-index: 11;
+}
+
+#game-over {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.8);
+    display: none;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    z-index: 30;
+}
+
+#game-over-content {
+    background-color: white;
+    padding: 20px;
+    border-radius: 10px;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.2);
+    text-align: center;
+}
+
+#game-over h2 {
+    color: #333;
+    font-size: 32px;
+    margin-bottom: 20px;
+}
+
+#restart-button {
+    margin-top: 20px;
+    padding: 10px 20px;
+    background-color: #4CAF50;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    font-size: 18px;
+    cursor: pointer;
+}
+
+#restart-button:hover {
+    background-color: #45a049;
+}
+
+#game-canvas {
+    position: absolute;
+    top: 0;
+    left: 0;
+    z-index: 1;
+}
