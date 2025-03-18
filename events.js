@@ -55,65 +55,6 @@ function setupCollisionEvents() {
             if (collisionForce < MIN_COLLISION_FORCE) {
                 continue;
             }
-            
-            // 과일끼리 충돌
-            if (bodyA.isFruit && bodyB.isFruit) {
-                // 같은 종류의 과일이고 합이 10인 경우
-                if (bodyA.fruitIndex === bodyB.fruitIndex && 
-                    bodyA.fruitNumber + bodyB.fruitNumber === 10 && 
-                    bodyA.fruitIndex < FRUITS.length - 1 && 
-                    !bodyA.cooldown && !bodyB.cooldown) {
-                    
-                    // 중간 위치 계산
-                    const midX = (bodyA.position.x + bodyB.position.x) / 2;
-                    const midY = (bodyA.position.y + bodyB.position.y) / 2;
-                    
-                    // 기존 과일 라벨 제거
-                    removeFruitLabel(bodyA);
-                    removeFruitLabel(bodyB);
-                    
-                    // 기존 과일 제거
-                    removeBody(bodyA);
-                    removeBody(bodyB);
-                    
-                    // 다음 단계 과일 생성
-                    const newFruitIndex = bodyA.fruitIndex + 1;
-                    
-                    // 랜덤 숫자 생성 (기존 확률 분포 사용)
-                    let randomNumber;
-                    const rand = Math.random();
-                    
-                    if (rand < 0.50) { // 50% 확률로 1-3 사이
-                        randomNumber = Math.floor(Math.random() * 3) + 1;
-                    } else if (rand < 0.80) { // 30% 확률로 4-5 사이
-                        randomNumber = Math.floor(Math.random() * 2) + 4;
-                    } else if (rand < 0.95) { // 15% 확률로 6-7 사이
-                        randomNumber = Math.floor(Math.random() * 2) + 6;
-                    } else { // 5% 확률로 8-9 사이
-                        randomNumber = Math.floor(Math.random() * 2) + 8;
-                    }
-                    
-                    // 새 과일 생성
-                    const newFruit = createFruit(midX, midY, newFruitIndex);
-                    
-                    // 생성된 과일에 랜덤 숫자 할당
-                    newFruit.fruitNumber = randomNumber;
-                    
-                    // 기존 과일 라벨 제거 후 새로 생성
-                    removeFruitLabel(newFruit);
-                    createFruitLabel(newFruit, randomNumber);
-                    
-                    // 쿨타임 설정 - 0.5초 동안 합치기 불가능
-                    newFruit.cooldown = true;
-                    setTimeout(() => {
-                        newFruit.cooldown = false;
-                    }, 500);
-                    
-                    // 점수 추가
-                    score += FRUITS[newFruitIndex].score;
-                    document.getElementById('score').textContent = score;
-                }
-            }
         }
     });
 }
@@ -232,19 +173,6 @@ function initGame() {
     // 다음 과일 미리보기 초기화
     generateNextPreviewFruit();
     updateNextFruit();
-    
-    // 테스트 버튼 이벤트 핸들러 추가
-    document.getElementById('add-score-btn').addEventListener('click', function() {
-        // 50점 추가
-        score += 50;
-        document.getElementById('score').textContent = score;
-        
-        // 다음 과일 미리보기 업데이트 (점수 변경에 따른 과일 종류 변경을 확인하기 위함)
-        generateNextPreviewFruit();
-        updatePreviewFruit();
-        
-        console.log(`테스트 버튼 클릭: 50점 추가됨, 현재 점수: ${score}`);
-    });
     
     // 게임 실행
     Runner.run(runner, engine);

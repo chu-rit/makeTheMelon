@@ -268,11 +268,12 @@ function mergeFruits(combination) {
     const bonusMultiplier = 1 + ((combination.length - 2) * 0.5);
     const scoreToAdd = Math.round(FRUITS[nextFruitIndex].score * bonusMultiplier);
     
-    // 콘솔에 로그 출력
-    if (combination.length > 2) {
-        const logText = `${combination.length}개 과일 합치기! 기본 점수: ${FRUITS[nextFruitIndex].score}, 보너스 배율: ${bonusMultiplier.toFixed(1)}배, 최종 점수: ${scoreToAdd}`;
-        console.log(logText);
-    }
+    // 합쳐짐 로그 추가
+    const fruitName = FRUITS[fruitType].name;
+    const numbersText = combination.map(fruit => fruit.fruitNumber).join(', ');
+    const newFruitName = FRUITS[nextFruitIndex].name;
+    const logText = `${fruitName}(${numbersText}) → ${newFruitName}(${randomNumber}) (${scoreToAdd}점, ${combination.length}개 과일 보너스: x${bonusMultiplier.toFixed(1)})`;
+    console.log(logText);
     
     // 기존 과일 라벨 제거 후 새로 생성
     removeFruitLabel(newFruit);
@@ -335,9 +336,6 @@ function generateNextPreviewFruit() {
     
     // 랜덤 숫자 생성 함수 사용
     afterNextFruitNumber = generateRandom();
-    
-    // 디버깅용 로그
-    console.log(`현재 점수: ${score}, 사용 가능한 최대 과일: ${maxFruitIndex} (${FRUITS[maxFruitIndex].name}), 선택된 과일: ${afterNextFruitIndex} (${FRUITS[afterNextFruitIndex].name})`);
 }
 
 // 다음 과일 미리보기 업데이트

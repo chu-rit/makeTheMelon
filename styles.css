@@ -1,3 +1,4 @@
+/* 기본 스타일 */
 body {
     margin: 0;
     padding: 0;
@@ -14,6 +15,7 @@ body {
     -ms-user-select: none;
 }
 
+/* 게임 컨테이너 스타일 */
 #game-container {
     position: relative;
     width: 400px;
@@ -24,6 +26,7 @@ body {
     overflow: hidden;
 }
 
+/* 캔버스 스타일 */
 #game-canvas {
     position: absolute;
     top: 0;
@@ -33,6 +36,7 @@ body {
     z-index: 1;
 }
 
+/* 점수 표시 스타일 */
 #score-container {
     position: absolute;
     top: 20px;
@@ -44,6 +48,7 @@ body {
     z-index: 2;
 }
 
+/* 드롭 라인 스타일 */
 #drop-line {
     position: absolute;
     top: 120px;
@@ -54,6 +59,7 @@ body {
     z-index: 2;
 }
 
+/* 대기 과일 스타일 */
 #waiting-fruit {
     position: absolute;
     top: 60px;
@@ -70,6 +76,7 @@ body {
     color: #ffffff;
 }
 
+/* 과일 라벨 스타일 */
 .fruit-label {
     position: absolute;
     display: flex;
@@ -82,6 +89,7 @@ body {
     pointer-events: none;
 }
 
+/* 다음 과일 미리보기 스타일 */
 #next-fruit-preview {
     position: absolute;
     top: 20px;
@@ -131,30 +139,7 @@ body {
     font-weight: bold;
 }
 
-/* 테스트 버튼 스타일 */
-#test-buttons {
-    position: absolute;
-    top: 10px;
-    right: 10px;
-    z-index: 10;
-}
-
-#add-score-btn {
-    background-color: #3498db;
-    color: white;
-    border: none;
-    padding: 8px 12px;
-    border-radius: 4px;
-    cursor: pointer;
-    font-weight: bold;
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
-    transition: background-color 0.2s;
-}
-
-#add-score-btn:hover {
-    background-color: #2980b9;
-}
-
+/* 게임 오버 스타일 */
 #game-over {
     position: absolute;
     top: 0;
