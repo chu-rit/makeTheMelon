@@ -84,7 +84,8 @@
             positionIterations: 8, // 위치 계산 반복 횟수 증가
             velocityIterations: 8, // 속도 계산 반복 횟수 증가
         });
-        engine.world.gravity.y = 1.5; // 중력 약간 증가
+        engine.world.gravity.y = 1; // 중력 조정
+        engine.world.gravity.scale = 0.001; // 중력 스케일 조정
 
         // 렌더러 생성
         const render = Render.create({
@@ -118,6 +119,7 @@
         // 벽 생성
         const wallOptions = {
             isStatic: true,
+            friction: 0.1,
             render: {
                 visible: true,
                 fillStyle: 'transparent',
@@ -186,11 +188,11 @@
             const randomNumber = (currentFruit === null) ? waitingFruitNumber : Math.floor(Math.random() * 9) + 1;
             
             const body = Bodies.circle(x, y, fruit.radius, {
-                restitution: 0.2, // 탄성 감소 (기존 0.3에서 0.2로)
-                friction: 10, // 마찰력 증가 
-                frictionAir: 0.005, // 공기 마찰력 증가 (기존 0.002에서 0.005로)
-                density: fruit.weight, // 과일 무게 사용
-                slop: 0.01, // 물체 간 겹침 허용 오차 감소
+                restitution: 0.3,  // 탄성 감소
+                friction: 0.8,     // 마찰력 증가
+                density: 0.001,    // 밀도 유지
+                frictionAir: 0.01, // 공기 마찰 추가
+                slop: 0,          // 겹침 허용 오차를 0으로 설정
                 timeScale: 1.0, // 시간 스케일 정상화
                 render: {
                     fillStyle: fruit.color,
