@@ -1,8 +1,4 @@
-let nextFruitIndex = 0; // 항상 체리(인덱스 0)만 선택
-let currentFruit = null;
-let canDropFruit = true;
-let waitingFruitNumber = Math.floor(Math.random() * 9) + 1; // 대기 중인 과일의 숫자를 저장할 변수
-
+// 게임 설정
 const FRUITS = [
     { name: '체리', radius: 25, color: '#FF0000', number: 1, weight: 0.001 },
     { name: '딸기', radius: 35, color: '#FF3366', number: 2, weight: 0.0015 },
@@ -17,54 +13,19 @@ const FRUITS = [
     { name: '수박', radius: 125, color: '#008000', number: 11, weight: 0.006 }
 ];
 
-// 다음 과일 표시 업데이트
-function updateNextFruit() {
-    nextFruitIndex = 0; // 항상 체리(인덱스 0)만 선택
-    
-    // 1~5는 66%, 6~9는 34%의 확률로 생성
-    const randomValue = Math.random();
-    if (randomValue < 0.66) {
-        // 66% 확률로 1~5 사이의 숫자 생성
-        waitingFruitNumber = Math.floor(Math.random() * 5) + 1;
-    } else {
-        // 34% 확률로 6~9 사이의 숫자 생성
-        waitingFruitNumber = Math.floor(Math.random() * 4) + 6;
-    }
-    
-    // 대기 중인 과일 업데이트
-    updateWaitingFruit();
-}
-
-// 대기 중인 과일 업데이트 (HTML 요소)
-function updateWaitingFruit() {
-    const fruit = FRUITS[nextFruitIndex];
-    
-    // 대기 중인 과일 스타일 설정
-    waitingFruitElement.style.width = `${fruit.radius * 2}px`;
-    waitingFruitElement.style.height = `${fruit.radius * 2}px`;
-    waitingFruitElement.style.backgroundColor = fruit.color;
-    waitingFruitElement.style.fontSize = `${fruit.radius * 0.8}px`;
-    waitingFruitElement.textContent = waitingFruitNumber; // 저장된 숫자 사용
-    waitingFruitElement.style.left = `${mouseX}px`;
-    waitingFruitElement.style.top = '100px';
-    
-    // 대기 중인 과일 표시
-    waitingFruitElement.style.display = canDropFruit ? 'flex' : 'none';
-}
-
 // 과일 생성
 function createFruit(x, y, fruitIndex) {
     const fruit = FRUITS[fruitIndex];
     
-    // 랜덤 숫자 할당 (현재 과일이 없으면 대기 중인 과일의 숫자 사용, 있으면 새로운 랜덤 숫자 생성)
-    const randomNumber = (currentFruit === null) ? waitingFruitNumber : Math.floor(Math.random() * 9) + 1;
+    // 대기 중인 과일의 숫자 사용
+    const randomNumber = waitingFruitNumber;
     
     const body = Bodies.circle(x, y, fruit.radius, {
-        restitution: 0.3,  // 탄성 감소
-        friction: 0.8,     // 마찰력 증가
-        density: 0.001,    // 밀도 유지
-        frictionAir: 0.01, // 공기 마찰 추가
-        slop: 0,          // 겹침 허용 오차를 0으로 설정
+        restitution: 0.2, // 탄성 감소 (기존 0.3에서 0.2로)
+        friction: 10, // 마찰력 증가 
+        frictionAir: 0.005, // 공기 마찰력 증가 (기존 0.002에서 0.005로)
+        density: fruit.weight, // 과일 무게 사용
+        slop: 0.01, // 물체 간 겹침 허용 오차 감소
         timeScale: 1.0, // 시간 스케일 정상화
         render: {
             fillStyle: fruit.color,
@@ -72,7 +33,7 @@ function createFruit(x, y, fruitIndex) {
             lineWidth: 0
         },
         fruitIndex: fruitIndex,
-        number: randomNumber, // 랜덤 숫자 할당
+        number: randomNumber, // 대기 중인 과일의 숫자 사용
         id: Date.now() + Math.random() // 고유 ID 할당
     });
 
@@ -88,7 +49,7 @@ function createFruit(x, y, fruitIndex) {
     text.style.width = `${fruit.radius * 2}px`;
     text.style.height = `${fruit.radius * 2}px`;
     text.style.lineHeight = `${fruit.radius * 2}px`;
-    text.textContent = randomNumber; // 랜덤 숫자 할당
+    text.textContent = randomNumber; // 대기 중인 과일의 숫자 사용
     text.id = `text-${body.id}`;  // 고유 ID 부여
     container.appendChild(text);
 
@@ -117,6 +78,76 @@ function createFruit(x, y, fruitIndex) {
     return body;
 }
 
+// 대기 중인 과일 업데이트 (HTML 요소)
+function updateWaitingFruit() {
+    const fruit = FRUITS[nextFruitIndex];
+    
+    // 대기 중인 과일 스타일 설정
+    waitingFruitElement.style.width = `${fruit.radius * 2}px`;
+    waitingFruitElement.style.height = `${fruit.radius * 2}px`;
+    waitingFruitElement.style.backgroundColor = fruit.color;
+    waitingFruitElement.style.fontSize = `${fruit.radius * 0.8}px`;
+    waitingFruitElement.textContent = waitingFruitNumber; // 저장된 숫자 사용
+    waitingFruitElement.style.left = `${mouseX}px`;
+    waitingFruitElement.style.top = '100px';
+    
+    // 대기 중인 과일 표시
+    waitingFruitElement.style.display = canDropFruit ? 'flex' : 'none';
+}
+
+// 두 과일이 접촉 중인지 확인
+function areFruitsTouching(fruitA, fruitB) {
+    const dx = fruitB.position.x - fruitA.position.x;
+    const dy = fruitB.position.y - fruitA.position.y;
+    const distance = Math.sqrt(dx * dx + dy * dy);
+    const radiusSum = fruitA.radius + fruitB.radius;
+    return distance <= radiusSum + 5; // 5픽셀 여유 추가
+}
+
+// DFS로 연결된 과일 그룹 찾기
+function dfs(index, visited, adjacencyMatrix, fruits, group) {
+    visited[index] = true;
+    group.push(fruits[index]);
+
+    for (let i = 0; i < fruits.length; i++) {
+        if (adjacencyMatrix[index][i] && !visited[i]) {
+            dfs(i, visited, adjacencyMatrix, fruits, group);
+        }
+    }
+}
+
+// 모든 과일 그룹 찾기
+function findAllFruitGroups(fruits) {
+    const adjacencyMatrix = Array.from({ length: fruits.length }, () => Array(fruits.length).fill(false));
+
+    // 모든 과일 쌍에 대해 접촉 여부 확인
+    for (let i = 0; i < fruits.length; i++) {
+        for (let j = i + 1; j < fruits.length; j++) {
+            if (areFruitsTouching(fruits[i], fruits[j])) {
+                adjacencyMatrix[i][j] = true;
+                adjacencyMatrix[j][i] = true;
+            }
+        }
+    }
+
+    // 방문 여부 추적
+    const visited = Array(fruits.length).fill(false);
+    const allGroups = [];
+
+    // 모든 과일에 대해 연결된 그룹 찾기
+    for (let i = 0; i < fruits.length; i++) {
+        if (!visited[i]) {
+            const group = [];
+            dfs(i, visited, adjacencyMatrix, fruits, group);
+            if (group.length > 0) {
+                allGroups.push(group);
+            }
+        }
+    }
+
+    return allGroups;
+}
+
 // 과일 드롭
 function dropFruit(x) {
     if (!canDropFruit || isGameOver) return;
@@ -131,7 +162,11 @@ function dropFruit(x) {
     World.add(engine.world, currentFruit);
 
     // 다음 과일 준비
-    nextFruitIndex = 0; // 항상 체리(인덱스 0)만 선택
+    waitingFruitNumber = Math.floor(Math.random() * 9) + 1; 
+    nextFruitIndex = 0; // 항상 체리(인덱스 0)로 설정
+    while(waitingFruitNumber == 1) { // 체리와 다른 숫자 생성
+        waitingFruitNumber = Math.floor(Math.random() * 9) + 1;
+    }
     
     // 일정 시간 후 다음 과일 드롭 가능
     setTimeout(() => {
@@ -139,12 +174,11 @@ function dropFruit(x) {
         currentFruit = null;
         
         // 다음 과일 표시 업데이트
-        updateNextFruit();
     }, 500);
 }
 
-// 과일 그룹 확인 및 합치기 함수
-function checkFruitGroups() {
+ // 과일 그룹 확인 및 합치기 함수
+ function checkFruitGroups() {
     if (isGameOver) return;
     
     // 모든 과일 가져오기
@@ -214,39 +248,6 @@ function checkFruitGroups() {
     }
 }
 
-// 모든 과일 그룹 찾기 함수
-function findAllFruitGroups(fruits) {
-    // 과일 간의 접촉 여부를 저장하는 인접 행렬
-    const adjacencyMatrix = Array(fruits.length).fill().map(() => Array(fruits.length).fill(false));
-    
-    // 모든 과일 쌍에 대해 접촉 여부 확인
-    for (let i = 0; i < fruits.length; i++) {
-        for (let j = i + 1; j < fruits.length; j++) {
-            if (areFruitsTouching(fruits[i], fruits[j])) {
-                adjacencyMatrix[i][j] = true;
-                adjacencyMatrix[j][i] = true;
-            }
-        }
-    }
-    
-    // 방문 여부 추적
-    const visited = Array(fruits.length).fill(false);
-    const allGroups = [];
-    
-    // 모든 과일에 대해 연결된 그룹 찾기
-    for (let i = 0; i < fruits.length; i++) {
-        if (!visited[i]) {
-            const group = [];
-            dfs(i, visited, adjacencyMatrix, fruits, group);
-            if (group.length > 0) {
-                allGroups.push(group);
-            }
-        }
-    }
-    
-    return allGroups;
-}
-
 // 그룹 내에서 합이 10이 되는 부분 그룹 찾기
 function findSubgroupsWithSum10(group) {
     const subgroups = [];
@@ -305,6 +306,39 @@ function findSubgroupsWithSum10(group) {
     }
     
     return uniqueSubgroups;
+}
+
+// 모든 과일 그룹 찾기 함수
+function findAllFruitGroups(fruits) {
+    // 과일 간의 접촉 여부를 저장하는 인접 행렬
+    const adjacencyMatrix = Array(fruits.length).fill().map(() => Array(fruits.length).fill(false));
+    
+    // 모든 과일 쌍에 대해 접촉 여부 확인
+    for (let i = 0; i < fruits.length; i++) {
+        for (let j = i + 1; j < fruits.length; j++) {
+            if (areFruitsTouching(fruits[i], fruits[j])) {
+                adjacencyMatrix[i][j] = true;
+                adjacencyMatrix[j][i] = true;
+            }
+        }
+    }
+    
+    // 방문 여부 추적
+    const visited = Array(fruits.length).fill(false);
+    const allGroups = [];
+    
+    // 모든 과일에 대해 연결된 그룹 찾기
+    for (let i = 0; i < fruits.length; i++) {
+        if (!visited[i]) {
+            const group = [];
+            dfs(i, visited, adjacencyMatrix, fruits, group);
+            if (group.length > 0) {
+                allGroups.push(group);
+            }
+        }
+    }
+    
+    return allGroups;
 }
 
 // DFS로 연결된 과일 그룹 찾기
@@ -369,4 +403,3 @@ function mergeFruits(group) {
     // 합쳐진 과일 로그
     console.log(`과일 합치기 완료! 보너스 점수: ${bonusScore}`);
 }
-
