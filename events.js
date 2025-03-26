@@ -4,13 +4,47 @@ document.addEventListener('DOMContentLoaded', () => {
     initGame();
     createWall();
 
+    // 터치 이벤트 감지를 위한 변수
+    let isTouchDevice = false;
+
+    // 터치 디바이스 감지
+    window.addEventListener('touchstart', function onFirstTouch() {
+        isTouchDevice = true;
+        // 이벤트 리스너 제거 (한 번만 실행)
+        window.removeEventListener('touchstart', onFirstTouch);
+    }, { passive: true });
+
     // 이벤트 위임을 사용하여 클릭 및 터치 이벤트 처리
-    container.addEventListener('click', handleInteraction);
-    container.addEventListener('touchend', handleInteraction);
+    container.addEventListener('click', (e) => {
+        // 터치 디바이스에서는 클릭 이벤트 무시 (터치 이벤트만 처리)
+        if (!isTouchDevice) {
+            handleInteraction();
+        }
+    });
+    
+    container.addEventListener('touchend', (e) => {
+        e.preventDefault(); // 기본 동작 방지
+        
+        // 터치 이벤트의 좌표로 mouseX 업데이트
+        if (e.changedTouches && e.changedTouches[0]) {
+            const touch = e.changedTouches[0];
+            const rect = container.getBoundingClientRect();
+            if (touch.clientX >= rect.left && touch.clientX <= rect.right) {
+                // mouseX 좌표 업데이트
+                updateMousePosition(touch.clientX - rect.left);
+                
+                // 과일 드롭
+                handleInteraction();
+            }
+        }
+    });
 
     // 마우스 이동 이벤트 처리 (디바운싱 제거)
     document.addEventListener('mousemove', (e) => {
-        handleMouseMove(e); // 디바운싱 제거
+        // 터치 디바이스에서는 mousemove 이벤트 무시
+        if (!isTouchDevice) {
+            handleMouseMove(e);
+        }
     });
 
     // 터치 이동 이벤트 처리 (디바운싱 적용)
@@ -54,7 +88,27 @@ document.addEventListener('DOMContentLoaded', () => {
     });
     
     // 다시 시작 버튼 이벤트 리스너
-    restartButton.addEventListener('click', initGame);
+    restartButton.addEventListener('click', (e) => {
+        if (!isTouchDevice) {
+            initGame();
+        }
+    });
+    
+    restartButton.addEventListener('touchend', (e) => {
+        e.preventDefault();
+        
+        // 터치 이벤트가 유효한지 확인
+        if (e.changedTouches && e.changedTouches[0]) {
+            const touch = e.changedTouches[0];
+            const rect = restartButton.getBoundingClientRect();
+            
+            // 터치가 버튼 영역 내에 있는지 확인
+            if (touch.clientX >= rect.left && touch.clientX <= rect.right &&
+                touch.clientY >= rect.top && touch.clientY <= rect.bottom) {
+                initGame();
+            }
+        }
+    });
 });
 
 // 상호작용 핸들러 (클릭 및 터치)
@@ -190,26 +244,6 @@ function checkGameOver() {
                     fruit.stableTime = null;
                 }
             }
-        }
-    }
-    
-    // 안정된 과일이 있으면 과일 드롭 불가능 상태로 설정
-    if (hasStableFruitAboveLine) {
-        if (canDropFruit) {
-            console.log(`드롭 불가능 상태로 전환 (안정된 과일 있음)`);
-            canDropFruit = false;
-        }
-        
-        // 경고 메시지 표시
-        const warningTime = Math.floor((5000 - stableFruitTime) / 1000);
-        if (warningTime >= 0) {
-            console.log(`경고: ${warningTime}초 후 게임 오버`);
-        }
-    } else {
-        // 안정된 과일이 없으면 드롭 가능 상태로 복원
-        if (!canDropFruit && !isGameOver) {
-            console.log(`드롭 가능 상태로 복원 (안정된 과일 없음)`);
-            canDropFruit = true;
         }
     }
 }
