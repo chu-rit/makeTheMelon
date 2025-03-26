@@ -9,6 +9,12 @@ let rotationInterval = null; // rotationInterval 변수 추가
 document.addEventListener('DOMContentLoaded', () => {
     const rotateButton = document.getElementById('rotate-button');
     rotateButton.addEventListener('click', startRotation);
+    
+    // 터치 이벤트 추가
+    rotateButton.addEventListener('touchend', (e) => {
+        e.preventDefault(); // 기본 동작 방지
+        startRotation();
+    });
 });
 
 // 회전 시작 함수

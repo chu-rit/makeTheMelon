@@ -34,11 +34,10 @@ body {
 /* 컨테이너 스타일 */
 #game-container {
     position: relative;
-    width: 100%;
-    max-width: 400px;
-    height: 100vh;
-    max-height: 600px;
-    aspect-ratio: 2/3;
+    width: 400px; /* 고정 너비 */
+    height: 600px; /* 고정 높이 */
+    max-width: 100%; /* 화면 너비를 넘지 않도록 */
+    aspect-ratio: 2/3; /* 가로:세로 비율 유지 */
     border: 2px solid var(--primary-color);
     border-radius: var(--border-radius);
     overflow: hidden;
@@ -46,7 +45,9 @@ body {
     /* GPU 가속 활성화 */
     transform: translateZ(0);
     will-change: transform;
-    margin: 20px auto;
+    margin: 30px auto; /* 상하 여백 */
+    /* 기기에 따라 비율 유지하면서 크기 조정 */
+    transform-origin: center;
 }
 
 /* 캔버스 컨테이너 */
@@ -188,12 +189,8 @@ body {
     }
     
     #game-container {
-        width: 100%;
-        height: 100vh;
-        max-height: none;
-        border: none;
-        border-radius: 0;
-        aspect-ratio: auto;
+        width: 90vw; /* 뷰포트 너비의 90% */
+        height: calc(90vw * 1.5); /* 2:3 비율 유지 */
     }
     
     #score, #next-fruit {
@@ -222,15 +219,21 @@ body {
 /* 가로 모드 최적화 */
 @media (max-width: 896px) and (orientation: landscape) {
     #game-container {
-        height: 100vh;
-        max-width: none;
-        aspect-ratio: auto;
-        width: auto;
-        max-height: 100vh;
+        width: 60vh; /* 뷰포트 높이의 60% */
+        height: 90vh; /* 뷰포트 높이의 90% */
+        max-height: 90vh;
     }
     
     body {
         overflow: hidden;
+    }
+}
+
+/* 미디어 쿼리 - 작은 화면에서 비율 유지 */
+@media (max-width: 450px) {
+    #game-container {
+        width: 90vw; /* 뷰포트 너비의 90% */
+        height: calc(90vw * 1.5); /* 2:3 비율 유지 */
     }
 }
 
