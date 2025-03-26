@@ -90,49 +90,73 @@ function checkGameOver() {
     const bodies = Composite.allBodies(engine.world);
     const fruits = bodies.filter(body => body.fruitIndex !== undefined);
     
+    // 게임 오버 라인 (y = 100)
+    const gameOverLine = 100;
+    
+    // 안정된 과일 체크
+    let hasStableFruitAboveLine = false;
+    let stableFruitTime = 0;
+    
     for (let i = 0; i < fruits.length; i++) {
         const fruit = fruits[i];
         
-        // 과일이 상단에 있고 움직임이 거의 없는 경우
-        if (fruit.position.y < 120 && 
+        // 과일이 게임 오버 라인보다 위에 있고 움직임이 거의 없는 경우
+        // 과일의 중심이 아닌 상단 가장자리를 기준으로 체크
+        const fruitTopEdge = fruit.position.y - FRUITS[fruit.fruitIndex].radius;
+        
+        if (fruitTopEdge < gameOverLine && 
             Math.abs(fruit.velocity.y) < 0.05 && 
             fruit.position.x > 30 && 
             fruit.position.x < containerWidth - 30) {
             
             if (!fruit.stableTime) {
                 fruit.stableTime = Date.now();
-            } else if (Date.now() - fruit.stableTime > 5000) { // 5초 이상 상단에 머물러 있으면 게임 오버
-                // 주변에 다른 과일이 있는지 확인
-                let hasNearbyFruits = false;
-                const fruitRadius = FRUITS[fruit.fruitIndex].radius;
+                console.log(`과일이 안정 상태 시작: ${FRUITS[fruit.fruitIndex].name}`);
+            } else {
+                const currentStableTime = Date.now() - fruit.stableTime;
                 
-                for (let j = 0; j < fruits.length; j++) {
-                    if (i === j) continue;
-                    
-                    const otherFruit = fruits[j];
-                    const distance = Math.sqrt(
-                        Math.pow(fruit.position.x - otherFruit.position.x, 2) + 
-                        Math.pow(fruit.position.y - otherFruit.position.y, 2)
-                    );
-                    
-                    if (distance < fruitRadius * 2) {
-                        hasNearbyFruits = true;
-                        break;
-                    }
-                }
-                
-                if (!hasNearbyFruits) {
+                // 5초 이상 안정된 상태로 있으면 게임 오버
+                if (currentStableTime > 5000) {
+                    console.log(`게임 오버: 과일이 5초 이상 안정 상태 - ${FRUITS[fruit.fruitIndex].name}`);
                     isGameOver = true;
                     gameOverElement.style.display = 'block';
                     restartButton.style.display = 'block';
+                    canDropFruit = false; // 명시적으로 드롭 불가능 상태로 설정
                     return;
-                } else {
-                    // 주변에 과일이 있으면 안정 시간 초기화
-                    fruit.stableTime = Date.now();
+                }
+                
+                // 가장 오래 안정된 과일의 시간 기록
+                if (currentStableTime > stableFruitTime) {
+                    hasStableFruitAboveLine = true;
+                    stableFruitTime = currentStableTime;
                 }
             }
         } else {
-            fruit.stableTime = null;
+            // 안정 상태가 아니면 stableTime 초기화
+            if (fruit.stableTime) {
+                console.log(`과일이 안정 상태 해제: ${FRUITS[fruit.fruitIndex].name}`);
+                fruit.stableTime = null;
+            }
+        }
+    }
+    
+    // 안정된 과일이 있으면 과일 드롭 불가능 상태로 설정
+    if (hasStableFruitAboveLine) {
+        if (canDropFruit) {
+            console.log(`드롭 불가능 상태로 전환 (안정된 과일 있음)`);
+            canDropFruit = false;
+        }
+        
+        // 경고 메시지 표시
+        const warningTime = Math.floor((5000 - stableFruitTime) / 1000);
+        if (warningTime >= 0) {
+            console.log(`경고: ${warningTime}초 후 게임 오버`);
+        }
+    } else {
+        // 안정된 과일이 없으면 드롭 가능 상태로 복원
+        if (!canDropFruit && !isGameOver) {
+            console.log(`드롭 가능 상태로 복원 (안정된 과일 없음)`);
+            canDropFruit = true;
         }
     }
 }
