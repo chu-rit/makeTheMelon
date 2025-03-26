@@ -2,33 +2,36 @@
 const container = document.getElementById('game-container');
 const canvasContainer = document.getElementById('canvas-container');
 const waitingFruitElement = document.getElementById('waiting-fruit');
+const scoreElement = document.getElementById('score');
+const gameOverElement = document.getElementById('game-over');
+const restartButton = document.getElementById('restart-button');
 const containerWidth = container.clientWidth;
 const containerHeight = container.clientHeight;
 
-let score = 0; // 점수
-let nextFruitIndex = 0; // 과알 제한값
-let currentFruit = null; // 현재 과일
-let canDropFruit = true; // 과일 드롭 가능
-let isGameOver = false; // 게임 종료
-let mouseX = 0; // 마우스 X 좌표
-let waitingFruitNumber = 0; // 대기 중인 과일의 숫자
+// 게임 상태 변수
+let score = 0;
+let nextFruitIndex = 0;
+let currentFruit = null;
+let canDropFruit = true;
+let isGameOver = false;
+let mouseX = 0;
+let waitingFruitNumber = 0;
+// 숫자 변수 정의
+let currentFruitNumber = 0; // 현재 떨어질 숫자
+let nextFruitNumber = 0; // 다음에 떨어질 숫자
 
+// 물리 엔진 모듈
+const { Engine, Render, Runner, Bodies, Body, Events, World, Composite } = Matter;
 
-// 물리 엔진 설정
-const Engine = Matter.Engine,
-    Render = Matter.Render,
-    Runner = Matter.Runner,
-    Bodies = Matter.Bodies,
-    Body = Matter.Body,
-    Events = Matter.Events,
-    World = Matter.World,
-    Composite = Matter.Composite;
-
-// 엔진 생성
+// 엔진 생성 및 최적화 설정
 const engine = Engine.create({
-    enableSleeping: true, // 움직임이 없는 물체는 '잠자기' 상태로 전환하여 성능 향상
-    constraintIterations: 4, // 제약 조건 반복 횟수 증가
-    positionIterations: 8, // 위치 계산 반복 횟수 증가
-    velocityIterations: 8, // 속도 계산 반복 횟수 증가
+    enableSleeping: true,
+    constraintIterations: 4,
+    positionIterations: 8,
+    velocityIterations: 8,
 });
-engine.world.gravity.y = 1.5; // 중력 약간 증가
+engine.world.gravity.y = 1.5;
+
+// 러너 생성 및 시작
+const runner = Runner.create();
+Runner.run(runner, engine);
