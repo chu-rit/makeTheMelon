@@ -21,6 +21,13 @@ document.addEventListener('DOMContentLoaded', () => {
         touchMoveTimer = setTimeout(() => handleTouchMove(e), 10);
     }, { passive: false });
 
+    // 화면 크기 변경 이벤트 처리 (디바운싱 적용)
+    let resizeTimer;
+    window.addEventListener('resize', () => {
+        clearTimeout(resizeTimer);
+        resizeTimer = setTimeout(handleResize, 200);
+    });
+
     // 충돌 이벤트 감지 (스로틀링 적용)
     let lastCollisionCheck = 0;
     Events.on(engine, 'collisionStart', (event) => {
@@ -207,6 +214,34 @@ function checkGameOver() {
     }
 }
 
+// 화면 크기 변경 핸들러
+function handleResize() {
+    // 컨테이너 크기 업데이트
+    const newContainerWidth = container.clientWidth;
+    const newContainerHeight = container.clientHeight;
+    
+    // 전역 변수 업데이트
+    window.containerWidth = newContainerWidth;
+    window.containerHeight = newContainerHeight;
+    
+    console.log(`화면 크기 변경: ${newContainerWidth}x${newContainerHeight}`);
+    
+    // 렌더러가 있는 경우 크기 업데이트
+    if (window.renderer) {
+        Render.setPixelRatio(window.renderer, window.devicePixelRatio || 1);
+        Render.setSize(window.renderer, newContainerWidth, newContainerHeight);
+    }
+    
+    // 벽 재생성
+    createWall();
+    
+    // 대기 중인 과일 위치 업데이트
+    updateWaitingFruit();
+    
+    // 다음 과일 미리보기 업데이트
+    updateNextFruit();
+}
+
 // 모바일 디바이스에서 확대/축소 방지 (이벤트 위임 사용)
 document.addEventListener('touchstart', (e) => {
     if (e.touches.length > 1) {
@@ -256,17 +291,20 @@ function render() {
     };
 
     // 렌더러 생성 및 실행
-    const render = Render.create({
+    const renderer = Render.create({
         element: canvasContainer,
         engine: engine,
         options: renderOptions
     });
 
-    Render.run(render);
+    // 전역 변수에 렌더러 저장 (리사이즈 이벤트에서 사용)
+    window.renderer = renderer;
+
+    Render.run(renderer);
     
-    // 물리 엔진 실행
-    const runner = Runner.create();
-    Runner.run(runner, engine);
+    // 물리 엔진 실행은 main.js에서 이미 수행하므로 여기서는 하지 않음
+    // const runner = Runner.create();
+    // Runner.run(runner, engine);
 }
 
 // 게임 초기화 함수 (최적화)
