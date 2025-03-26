@@ -409,10 +409,10 @@ function createWall() {
         }
     };
 
-    // 벽 생성
-    const ground = Bodies.rectangle(containerWidth / 2, containerHeight, containerWidth, 20, groundOptions);
-    const leftWall = Bodies.rectangle(0, containerHeight / 2, 10, containerHeight, wallOptions);
-    const rightWall = Bodies.rectangle(containerWidth, containerHeight / 2, 10, containerHeight, wallOptions);
+    // 벽 생성 - 바닥 위치를 조정 (containerHeight - 50으로 위로 올림)
+    const ground = Bodies.rectangle(containerWidth / 2, containerHeight - 50, containerWidth, 20, groundOptions);
+    const leftWall = Bodies.rectangle(0, (containerHeight - 50) / 2, 10, containerHeight - 50, wallOptions);
+    const rightWall = Bodies.rectangle(containerWidth, (containerHeight - 50) / 2, 10, containerHeight - 50, wallOptions);
     
     // 한 번에 월드에 추가
     World.add(engine.world, [ground, leftWall, rightWall]);
