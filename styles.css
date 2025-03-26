@@ -132,6 +132,30 @@ body {
     background-color: #ff4f4f;
 }
 
+/* 게임 버튼 스타일 */
+.game-button {
+    position: absolute;
+    padding: 8px 16px;
+    background-color: var(--accent-color);
+    color: white;
+    border: none;
+    border-radius: var(--border-radius);
+    cursor: pointer;
+    font-weight: bold;
+    transition: background-color var(--transition-speed);
+    z-index: 10;
+}
+
+.game-button:hover {
+    background-color: #e05a5a;
+}
+
+/* 회전 버튼 위치 */
+#rotate-button {
+    top: 10px;
+    right: 10px;
+}
+
 /* 애니메이션 정의 */
 @keyframes fadeIn {
     from { opacity: 0; }

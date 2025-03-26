@@ -61,7 +61,8 @@ function createFruit(x, y, fruitIndex) {
         },
         fruitIndex: fruitIndex,
         number: fruitNumber,
-        id: Date.now() + Math.random()
+        id: Date.now() + Math.random(),
+        isFruit: true // 과일 식별 플래그 추가
     });
 
     // 과일 내부에 숫자 표시
@@ -92,8 +93,21 @@ function createFruit(x, y, fruitIndex) {
         }
         
         if (body.position) {
-            textElement.style.left = `${body.position.x - fruit.radius}px`;
-            textElement.style.top = `${body.position.y - fruit.radius}px`;
+            // 회전 상태에 따라 숫자 위치 조정
+            if (window.isFlipped) {
+                // 화면이 뒤집힌 상태에서는 숫자 위치도 반대로
+                const containerHeight = container.clientHeight;
+                const containerWidth = container.clientWidth;
+                const adjustedY = containerHeight - body.position.y;
+                const adjustedX = containerWidth - body.position.x;
+                textElement.style.left = `${adjustedX - fruit.radius}px`;
+                textElement.style.top = `${adjustedY - fruit.radius}px`;
+                // 텍스트는 회전시키지 않음
+            } else {
+                // 원래 상태에서는 그대로
+                textElement.style.left = `${body.position.x - fruit.radius}px`;
+                textElement.style.top = `${body.position.y - fruit.radius}px`;
+            }
         } else {
             textElement.remove();
             textElementCache.delete(body.id);
@@ -114,13 +128,18 @@ function updateWaitingFruit() {
     const fruit = FRUITS[nextFruitIndex];
     
     // 대기 중인 과일 스타일 설정 (한 번에 업데이트)
+    let topPosition;
+    
+    // 회전 상태와 관계없이 항상 상단에 위치
+    topPosition = `${100 - fruit.radius}px`;
+    
     Object.assign(waitingFruitElement.style, {
         width: `${fruit.radius * 2}px`,
         height: `${fruit.radius * 2}px`,
         backgroundColor: fruit.color,
         fontSize: `${fruit.radius * 0.8}px`,
         left: `${mouseX - fruit.radius}px`, 
-        top: `${100 - fruit.radius}px`, 
+        top: topPosition, 
         display: canDropFruit ? 'flex' : 'none'
     });
     
@@ -269,7 +288,23 @@ function dropFruit(x) {
     waitingFruitElement.style.display = 'none';
     
     // 실제 물리 효과가 있는 과일 생성
-    currentFruit = createFruit(x, 100, nextFruitIndex);
+    let dropY;
+    let dropX = x;
+    
+    // 회전 상태에 따라 드롭 위치 조정
+    if (window.isFlipped) {
+        // 화면이 뒤집힌 상태에서는 화면 하단에서 드롭
+        const containerHeight = container.clientHeight;
+        dropY = containerHeight - 100;
+        // 좌우 반전된 위치 계산
+        const containerWidth = container.clientWidth;
+        dropX = containerWidth - x;
+    } else {
+        // 원래 상태에서는 화면 상단에서 드롭
+        dropY = 100;
+    }
+    
+    currentFruit = createFruit(dropX, dropY, nextFruitIndex);
     World.add(engine.world, currentFruit);
 
     // 다음 과일 준비

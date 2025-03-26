@@ -31,3 +31,7 @@ const engine = Engine.create({
     velocityIterations: 8,
 });
 engine.world.gravity.y = 1.5;
+
+// 러너 생성 및 시작
+const runner = Runner.create();
+Runner.run(runner, engine);
