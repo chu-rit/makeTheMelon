@@ -70,7 +70,6 @@ function handleTouchMove(e) {
     if (e.touches && e.touches[0]) {
         const touch = e.touches[0];
         const rect = container.getBoundingClientRect();
-        
         if (touch.clientX >= rect.left && touch.clientX <= rect.right) {
             updateMousePosition(touch.clientX - rect.left);
         }
@@ -108,13 +107,15 @@ function checkGameOver() {
                 const fruitRadius = FRUITS[fruit.fruitIndex].radius;
                 
                 for (let j = 0; j < fruits.length; j++) {
-                    if (fruits[j].id === fruit.id) continue;
+                    if (i === j) continue;
                     
-                    const dx = fruits[j].position.x - fruit.position.x;
-                    const dy = fruits[j].position.y - fruit.position.y;
-                    const distanceSquared = dx * dx + dy * dy;
+                    const otherFruit = fruits[j];
+                    const distance = Math.sqrt(
+                        Math.pow(fruit.position.x - otherFruit.position.x, 2) + 
+                        Math.pow(fruit.position.y - otherFruit.position.y, 2)
+                    );
                     
-                    if (distanceSquared < (fruitRadius * 3) * (fruitRadius * 3)) {
+                    if (distance < fruitRadius * 2) {
                         hasNearbyFruits = true;
                         break;
                     }
@@ -148,13 +149,12 @@ const DOUBLE_TAP_DELAY = 500;
 let lastTapTime = 0;
 
 document.addEventListener('touchend', (e) => {
-    const currentTime = Date.now();
+    const currentTime = new Date().getTime();
     const tapLength = currentTime - lastTapTime;
     
     if (tapLength < DOUBLE_TAP_DELAY && tapLength > 0) {
         e.preventDefault();
     }
-    
     lastTapTime = currentTime;
 }, { passive: false });
 
@@ -179,7 +179,6 @@ function render() {
         showPositions: false,
         showAngleIndicator: false,
         showIds: false,
-        showShadows: false,
         showVertexNumbers: false,
         showConvexHulls: false,
         showInternalEdges: false,
@@ -224,10 +223,13 @@ function initGame() {
     gameOverElement.style.display = 'none';
     restartButton.style.display = 'none';
     
-    // 대기 과일 초기화 - 확률 분포 적용
-    waitingFruitNumber = getRandomNumber();
+    // 대기 중인 과일 초기화 - 확률 분포 적용
+    currentFruitNumber = getRandomNumber();
+    nextFruitNumber = getRandomNumber();
+    waitingFruitNumber = currentFruitNumber;
     nextFruitIndex = 0; // 항상 체리(인덱스 0)로 설정
     updateWaitingFruit();
+    updateNextFruit();
     
     // 드롭 가능 상태로 설정
     canDropFruit = true;
@@ -258,16 +260,36 @@ function getRandomNumber() {
     return Math.floor(Math.random() * (rangeMax - rangeMin + 1)) + rangeMin;
 }
 
+// 다음 과일 업데이트 함수
+function updateNextFruit() {
+    const fruit = FRUITS[nextFruitIndex];
+    const nextFruitElement = document.getElementById('next-fruit');
+    
+    // 다음 과일 스타일 설정
+    Object.assign(nextFruitElement.style, {
+        width: `${fruit.radius}px`,
+        height: `${fruit.radius}px`,
+        backgroundColor: fruit.color,
+        fontSize: `${fruit.radius * 0.5}px`,
+        color: 'white',
+        borderRadius: '50%',
+        display: 'flex',
+        justifyContent: 'center',
+        alignItems: 'center'
+    });
+    
+    nextFruitElement.textContent = nextFruitNumber;
+}
+
 // 벽 생성 함수 (최적화)
 function createWall() {
     // 벽 공통 옵션
     const wallOptions = {
         isStatic: true,
         render: {
-            visible: true,
-            fillStyle: 'transparent',
+            fillStyle: '#333',
             strokeStyle: '#333',
-            lineWidth: 1
+            lineWidth: 0
         }
     };
 
@@ -275,8 +297,7 @@ function createWall() {
     const groundOptions = {
         ...wallOptions,
         render: {
-            ...wallOptions.render,
-            fillStyle: '#f0f0f0'
+            fillStyle: '#333'
         }
     };
 
@@ -284,7 +305,7 @@ function createWall() {
     const ground = Bodies.rectangle(containerWidth / 2, containerHeight, containerWidth, 20, groundOptions);
     const leftWall = Bodies.rectangle(0, containerHeight / 2, 10, containerHeight, wallOptions);
     const rightWall = Bodies.rectangle(containerWidth, containerHeight / 2, 10, containerHeight, wallOptions);
-
+    
     // 한 번에 월드에 추가
     World.add(engine.world, [ground, leftWall, rightWall]);
 }

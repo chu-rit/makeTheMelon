@@ -16,6 +16,9 @@ let canDropFruit = true;
 let isGameOver = false;
 let mouseX = 0;
 let waitingFruitNumber = 0;
+// 숫자 변수 정의
+let currentFruitNumber = 0; // 현재 떨어질 숫자
+let nextFruitNumber = 0; // 다음에 떨어질 숫자
 
 // 물리 엔진 모듈
 const { Engine, Render, Runner, Bodies, Body, Events, World, Composite } = Matter;

@@ -44,7 +44,8 @@ function getRandomNumber() {
 // 과일 생성
 function createFruit(x, y, fruitIndex) {
     const fruit = FRUITS[fruitIndex];
-    const randomNumber = waitingFruitNumber;
+    // 현재 떨어질 숫자 사용
+    const fruitNumber = currentFruitNumber;
     
     const body = Bodies.circle(x, y, fruit.radius, {
         restitution: 0.2,
@@ -59,7 +60,7 @@ function createFruit(x, y, fruitIndex) {
             lineWidth: 0
         },
         fruitIndex: fruitIndex,
-        number: randomNumber,
+        number: fruitNumber,
         id: Date.now() + Math.random()
     });
 
@@ -75,7 +76,7 @@ function createFruit(x, y, fruitIndex) {
     text.style.width = `${fruit.radius * 2}px`;
     text.style.height = `${fruit.radius * 2}px`;
     text.style.lineHeight = `${fruit.radius * 2}px`;
-    text.textContent = randomNumber;
+    text.textContent = fruitNumber;
     text.id = `text-${body.id}`;
     container.appendChild(text);
 
@@ -123,7 +124,7 @@ function updateWaitingFruit() {
         display: canDropFruit ? 'flex' : 'none'
     });
     
-    waitingFruitElement.textContent = waitingFruitNumber;
+    waitingFruitElement.textContent = currentFruitNumber;
     waitingFruitElement.style.color = 'white'; // 텍스트 색상을 흰색으로 설정
 }
 
@@ -272,7 +273,14 @@ function dropFruit(x) {
     World.add(engine.world, currentFruit);
 
     // 다음 과일 준비
-    waitingFruitNumber = Math.floor(Math.random() * 9) + 1; 
+    // 현재 과일 숫자를 다음 과일 숫자로 업데이트
+    currentFruitNumber = nextFruitNumber;
+    // 새로운 다음 과일 숫자 생성
+    nextFruitNumber = getRandomNumber();
+    // 대기 중인 과일 업데이트
+    updateWaitingFruit();
+    // 다음 과일 미리보기 업데이트
+    updateNextFruit();
     
     // 일정 시간 후 다음 과일 드롭 가능
     setTimeout(() => {
@@ -333,6 +341,9 @@ function checkFruitGroups() {
                         mergeFruits(subgroup);
                         mergedAny = true;
                         
+                        // 로그 출력
+                        console.log(`합쳐진 과일: ${subgroup.map(fruit => `${FRUITS[fruit.fruitIndex].name}(${fruit.number})`).join(', ')}`);
+                        
                         // 처리된 과일 표시
                         subgroup.forEach(fruit => processedFruits.add(fruit.id));
                     }
@@ -386,22 +397,32 @@ function mergeFruits(group) {
         
         // 다음 과일의 숫자를 확률 분포에 따라 결정
         const newFruitNumber = getRandomNumber();
+        
+        // 현재 과일 숫자를 임시로 저장
+        const tempCurrentFruitNumber = currentFruitNumber;
+        // 새 과일 생성을 위해 currentFruitNumber 값을 변경
+        currentFruitNumber = newFruitNumber;
+        
         const newFruit = createFruit(centerX, centerY, nextFruitIndex);
         
-        // 과일에 숫자 할당
-        newFruit.fruitNumber = newFruitNumber;
-        
-        // 텍스트 업데이트
-        const textElement = document.getElementById(newFruit.textId);
-        if (textElement) {
-            textElement.textContent = newFruitNumber;
-        }
+        // currentFruitNumber 값 복원
+        currentFruitNumber = tempCurrentFruitNumber;
         
         World.add(engine.world, newFruit);
     } else {
         // 이미 최대 크기면 그대로 유지
         nextFruitIndex = currentFruitIndex;
+        
+        // 현재 과일 숫자를 임시로 저장
+        const tempCurrentFruitNumber = currentFruitNumber;
+        // 새 과일 생성을 위해 currentFruitNumber 값을 변경
+        currentFruitNumber = getRandomNumber();
+        
         const newFruit = createFruit(centerX, centerY, nextFruitIndex);
+        
+        // currentFruitNumber 값 복원
+        currentFruitNumber = tempCurrentFruitNumber;
+        
         World.add(engine.world, newFruit);
     }
     
