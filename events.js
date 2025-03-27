@@ -18,7 +18,7 @@ document.addEventListener('DOMContentLoaded', () => {
     container.addEventListener('click', (e) => {
         // 터치 디바이스에서는 클릭 이벤트 무시 (터치 이벤트만 처리)
         if (!isTouchDevice) {
-            handleInteraction();
+            handleInteraction(e.target.id);
         }
     });
     
@@ -112,7 +112,8 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 // 상호작용 핸들러 (클릭 및 터치)
-function handleInteraction() {
+function handleInteraction(id) {
+    if (id === 'rotate-button') return;
     if (canDropFruit) {
         dropFruit(mouseX);
     }
