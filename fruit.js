@@ -140,11 +140,17 @@ function updateWaitingFruit() {
         fontSize: `${fruit.radius * 0.8}px`,
         left: `${mouseX - fruit.radius}px`, 
         top: topPosition, 
-        display: canDropFruit ? 'flex' : 'none'
+        display: canDropFruit ? 'flex' : 'none',
+        justifyContent: 'center',
+        alignItems: 'center',
+        textAlign: 'center',
+        position: 'absolute',
+        borderRadius: '50%',
+        color: 'white'
     });
     
+    // 대기 중인 과일에 표시할 숫자는 currentFruitNumber (보여주는 숫자와 떨어뜨리는 숫자가 동일하게)
     waitingFruitElement.textContent = currentFruitNumber;
-    waitingFruitElement.style.color = 'white'; // 텍스트 색상을 흰색으로 설정
 }
 
 // 두 과일이 접촉 중인지 확인 (최적화)
@@ -319,9 +325,13 @@ function dropFruit(x) {
     
     // 일정 시간 후 다음 과일 드롭 가능
     setTimeout(() => {
+        console.log('Next fruit:', nextFruitNumber);
+        // 대기 중인 과일 표시
+        updateWaitingFruit();
+        waitingFruitElement.style.display = 'flex';
         canDropFruit = true;
         currentFruit = null;
-    }, 500);
+    }, 1000); // 5000에서 1000으로 변경 (5초 -> 1초)
 }
 
 // 과일 그룹 확인 및 합치기 함수 (최적화)

@@ -443,10 +443,15 @@ function createWall() {
         }
     };
 
-    // 벽 생성 - 바닥 위치를 조정 (containerHeight - 50으로 위로 올림)
-    const ground = Bodies.rectangle(containerWidth / 2, containerHeight - 50, containerWidth, 20, groundOptions);
-    const leftWall = Bodies.rectangle(0, (containerHeight - 50) / 2, 10, containerHeight - 50, wallOptions);
-    const rightWall = Bodies.rectangle(containerWidth, (containerHeight - 50) / 2, 10, containerHeight - 50, wallOptions);
+    // 벽 생성 - 컨테이너 모서리에 정확히 맞도록 조정
+    // 바닥
+    const ground = Bodies.rectangle(containerWidth / 2, containerHeight, containerWidth, 20, groundOptions);
+    
+    // 왼쪽 벽 - x 좌표를 -5로 설정하여 컨테이너 왼쪽 모서리에 맞춤
+    const leftWall = Bodies.rectangle(-5, containerHeight / 2, 10, containerHeight, wallOptions);
+    
+    // 오른쪽 벽 - x 좌표를 containerWidth + 5로 설정하여 컨테이너 오른쪽 모서리에 맞춤
+    const rightWall = Bodies.rectangle(containerWidth + 5, containerHeight / 2, 10, containerHeight, wallOptions);
     
     // 한 번에 월드에 추가
     World.add(engine.world, [ground, leftWall, rightWall]);

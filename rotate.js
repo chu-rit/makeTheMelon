@@ -185,47 +185,59 @@ function resetFloor() {
     // 바닥 및 벽 생성 (화면 방향에 맞게)
     let ground, leftWall, rightWall;
     
-    // 여백 크기 (바닥을 50px 안쪽으로 이동)
-    const margin = 50;
-    
     if (window.isFlipped) {
-        // 뒤집힌 상태에서는 바닥이 위에 위치 (여백 추가)
+        // 뒤집힌 상태에서는 바닥이 위에 위치
         ground = Matter.Bodies.rectangle(
             containerWidth / 2, 
-            0 + margin, // 상단에서 여백만큼 아래로
+            0, // 상단 모서리에 정확히 맞춤
             containerWidth, 
-            40, 
+            20, 
             groundOptions
+        );
+        
+        // 좌우 벽 생성 (컨테이너 모서리에 정확히 맞춤)
+        leftWall = Matter.Bodies.rectangle(
+            -5, // 왼쪽 모서리에 정확히 맞춤
+            containerHeight / 2, 
+            10, 
+            containerHeight, 
+            wallOptions
+        );
+        
+        rightWall = Matter.Bodies.rectangle(
+            containerWidth + 5, // 오른쪽 모서리에 정확히 맞춤
+            containerHeight / 2, 
+            10, 
+            containerHeight, 
+            wallOptions
         );
     } else {
-        // 원래 상태에서는 바닥이 아래에 위치 (여백 추가)
+        // 원래 상태에서는 바닥이 아래에 위치
         ground = Matter.Bodies.rectangle(
             containerWidth / 2, 
-            containerHeight - margin, // 하단에서 여백만큼 위로
+            containerHeight, // 하단 모서리에 정확히 맞춤
             containerWidth, 
-            40, 
+            20, 
             groundOptions
         );
+        
+        // 좌우 벽 생성 (컨테이너 모서리에 정확히 맞춤)
+        leftWall = Matter.Bodies.rectangle(
+            -5, // 왼쪽 모서리에 정확히 맞춤
+            containerHeight / 2, 
+            10, 
+            containerHeight, 
+            wallOptions
+        );
+        
+        rightWall = Matter.Bodies.rectangle(
+            containerWidth + 5, // 오른쪽 모서리에 정확히 맞춤
+            containerHeight / 2, 
+            10, 
+            containerHeight, 
+            wallOptions
+        );
     }
-    
-    // 좌우 벽 생성 (높이 조정)
-    const effectiveHeight = containerHeight - (margin * 2); // 여백을 고려한 유효 높이
-    
-    leftWall = Matter.Bodies.rectangle(
-        0, 
-        containerHeight / 2, 
-        20, 
-        effectiveHeight, 
-        wallOptions
-    );
-    
-    rightWall = Matter.Bodies.rectangle(
-        containerWidth, 
-        containerHeight / 2, 
-        20, 
-        effectiveHeight, 
-        wallOptions
-    );
     
     // 월드에 추가
     Matter.World.add(engine.world, [ground, leftWall, rightWall]);
@@ -280,4 +292,7 @@ function updateWaitingFruitPosition() {
     
     // 회전 상태와 관계없이 항상 상단에 위치
     waitingFruit.style.top = `${100 - fruit.radius}px`;
+    
+    // 대기 중인 과일 숫자 업데이트 - currentFruitNumber 사용
+    waitingFruit.textContent = currentFruitNumber;
 }
