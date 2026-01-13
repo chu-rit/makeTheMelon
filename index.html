@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>수박 게임</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/matter-js/0.19.0/matter.min.js"></script>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div id="game-container">
+        <div id="canvas-container"></div>
+        <div id="score">점수: 0</div>
+        <div class="drop-line"></div>
+        <div class="game-over" id="game-over">게임 오버!</div>
+        <div id="waiting-fruit-container">
+            <div id="waiting-fruit"></div>
+        </div>
+        <div id="next-fruit-container" style="position: absolute; top: 10px; left: 10px; width: 50px; height: 50px; display: flex; justify-content: center; align-items: center; background-color: rgba(255, 255, 255, 0.8); border: 1px solid #ccc; border-radius: 5px;">
+            <div id="next-fruit"></div>
+        </div>
+        <button id="rotate-button" class="game-button">회전</button>
+        <button id="restart-button">다시 시작</button>
+    </div>
+
+    <script src="main.js"></script>
+    <script src="fruit.js"></script>
+    <script src="events.js"></script>
+    <script src="rotate.js"></script>
+</body>
+</html>

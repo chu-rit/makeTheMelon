@@ -1,0 +1,1106 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>수박 게임</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/matter-js/0.19.0/matter.min.js"></script>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background-color: #f5f5f5;
+            font-family: 'Arial', sans-serif;
+        }
+        #game-container {
+            position: relative;
+            width: 400px;
+            height: 600px;
+            background-color: #fff;
+            border-radius: 10px;
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+        }
+        #score {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            font-size: 24px;
+            font-weight: bold;
+            color: #333;
+            z-index: 10;
+        }
+        .next-fruit {
+            position: absolute;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 16px;
+            color: #333;
+            background-color: rgba(255, 255, 255, 0.7);
+            padding: 5px 10px;
+            border-radius: 5px;
+            z-index: 10;
+            text-align: center;
+        }
+        .next-preview {
+            position: absolute;
+            top: 50px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 40px;
+            height: 40px;
+            background-size: contain;
+            background-repeat: no-repeat;
+            background-position: center;
+            z-index: 10;
+        }
+        .game-over {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 48px;
+            font-weight: bold;
+            color: #ff5252;
+            background-color: rgba(255, 255, 255, 0.8);
+            padding: 20px 40px;
+            border-radius: 10px;
+            display: none;
+            z-index: 20;
+        }
+        .drop-line {
+            position: absolute;
+            top: 100px;
+            left: 0;
+            width: 100%;
+            height: 2px;
+            background-color: rgba(0, 0, 0, 0.1);
+            z-index: 5;
+        }
+        #waiting-fruit-container {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 15;
+        }
+        #waiting-fruit {
+            position: absolute;
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: white;
+            font-weight: bold;
+            pointer-events: none;
+        }
+        #restart-button {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, 50px);
+            padding: 10px 20px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            font-size: 18px;
+            cursor: pointer;
+            z-index: 30;
+            display: none;
+        }
+        #restart-button:hover {
+            background-color: #45a049;
+        }
+        #special-item {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            background-color: #555555;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            color: white;
+            font-weight: bold;
+            font-size: 14px;
+            cursor: grab;
+            box-shadow: 0 0 10px rgba(0,0,0,0.5);
+            z-index: 100;
+            text-align: center;
+            user-select: none;
+        }
+        #special-item.dragging {
+            cursor: grabbing;
+            opacity: 0.7;
+        }
+        #cooldown-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 0%;
+            background-color: rgba(0,0,0,0.7);
+            border-radius: 50%;
+            z-index: 101;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div id="game-container">
+        <div id="canvas-container" style="width: 100%; height: 100%; position: absolute;"></div>
+        <div id="score">점수: 0</div>
+        <div class="next-fruit">다음: <span id="next-fruit-name">체리</span></div>
+        <div class="next-preview" id="next-preview"></div>
+        <div class="drop-line"></div>
+        <div class="game-over" id="game-over">게임 오버!</div>
+        <div id="waiting-fruit-container">
+            <div id="waiting-fruit"></div>
+        </div>
+        <button id="restart-button">다시 시작</button>
+        <div id="special-item">무게추<br>준비됨
+            <div id="cooldown-overlay"></div>
+        </div>
+    </div>
+
+    <script>
+        // 물리 엔진 설정
+        const Engine = Matter.Engine,
+              Render = Matter.Render,
+              Runner = Matter.Runner,
+              Bodies = Matter.Bodies,
+              Body = Matter.Body,
+              Events = Matter.Events,
+              World = Matter.World,
+              Composite = Matter.Composite;
+
+        // 게임 설정
+        const FRUITS = [
+            { name: '체리', radius: 25, color: '#FF0000', number: 1, weight: 0.001 },
+            { name: '딸기', radius: 35, color: '#FF3366', number: 2, weight: 0.0015 },
+            { name: '포도', radius: 45, color: '#9400D3', number: 3, weight: 0.002 },
+            { name: '오렌지', radius: 55, color: '#FFA500', number: 4, weight: 0.0025 },
+            { name: '감', radius: 65, color: '#FF8C00', number: 5, weight: 0.003 },
+            { name: '사과', radius: 75, color: '#FF6347', number: 6, weight: 0.0035 },
+            { name: '배', radius: 85, color: '#ADFF2F', number: 7, weight: 0.004 },
+            { name: '복숭아', radius: 95, color: '#FFC0CB', number: 8, weight: 0.0045 },
+            { name: '파인애플', radius: 105, color: '#FFD700', number: 9, weight: 0.005 },
+            { name: '메론', radius: 115, color: '#32CD32', number: 10, weight: 0.0055 },
+            { name: '수박', radius: 125, color: '#008000', number: 11, weight: 0.006 }
+        ];
+
+        const container = document.getElementById('game-container');
+        const canvasContainer = document.getElementById('canvas-container');
+        const waitingFruitElement = document.getElementById('waiting-fruit');
+        const containerWidth = container.clientWidth;
+        const containerHeight = container.clientHeight;
+        let score = 0;
+        let nextFruitIndex = 0; // 항상 체리(인덱스 0)만 선택
+        let currentFruit = null;
+        let canDropFruit = true;
+        let isGameOver = false;
+        let waitingFruitNumber = Math.floor(Math.random() * 9) + 1; // 대기 중인 과일의 숫자를 저장할 변수
+        let mouseX = containerWidth / 2;
+
+        // 특수 아이템 설정
+        const SPECIAL_WEIGHT = {
+            name: '무게추',
+            radius: 80,
+            color: '#555555',
+            weight: 0.2, // 매우 무거운 무게
+            cooldown: 15000, // 15초 쿨다운
+            available: true
+        };
+
+        // 특수 아이템 UI 요소
+        const specialItemUI = document.getElementById('special-item');
+        const cooldownOverlay = document.getElementById('cooldown-overlay');
+
+        // 엔진 생성
+        const engine = Engine.create({
+            enableSleeping: true, // 움직임이 없는 물체는 '잠자기' 상태로 전환하여 성능 향상
+            constraintIterations: 4, // 제약 조건 반복 횟수 증가
+            positionIterations: 8, // 위치 계산 반복 횟수 증가
+            velocityIterations: 8, // 속도 계산 반복 횟수 증가
+        });
+        engine.world.gravity.y = 1.5; // 중력 약간 증가
+
+        // 렌더러 생성
+        const render = Render.create({
+            element: canvasContainer,
+            engine: engine,
+            options: {
+                width: containerWidth,
+                height: containerHeight,
+                wireframes: false,
+                background: '#fff',
+                pixelRatio: window.devicePixelRatio,
+                showSleeping: false,
+                showDebug: false,
+                showBroadphase: false,
+                showBounds: false,
+                showVelocity: false,
+                showCollisions: false,
+                showSeparations: false,
+                showAxes: false,
+                showPositions: false,
+                showAngleIndicator: false,
+                showIds: false,
+                showShadows: false,
+                showVertexNumbers: false,
+                showConvexHulls: false,
+                showInternalEdges: false,
+                showMousePosition: false
+            }
+        });
+
+        // 벽 생성
+        const wallOptions = {
+            isStatic: true,
+            render: {
+                visible: true,
+                fillStyle: 'transparent',
+                strokeStyle: '#333',
+                lineWidth: 1
+            }
+        };
+
+        const ground = Bodies.rectangle(containerWidth / 2, containerHeight, containerWidth, 20, {
+            ...wallOptions,
+            render: {
+                ...wallOptions.render,
+                fillStyle: '#f0f0f0'
+            }
+        });
+        const leftWall = Bodies.rectangle(0, containerHeight / 2, 10, containerHeight, wallOptions);
+        const rightWall = Bodies.rectangle(containerWidth, containerHeight / 2, 10, containerHeight, wallOptions);
+
+        World.add(engine.world, [ground, leftWall, rightWall]);
+
+        // 렌더러 실행
+        Render.run(render);
+        const runner = Runner.create();
+        Runner.run(runner, engine);
+
+        // 다음 과일 표시 업데이트
+        function updateNextFruit() {
+            nextFruitIndex = 0; // 항상 체리(인덱스 0)만 선택
+            
+            // 1~5는 66%, 6~9는 34%의 확률로 생성
+            const randomValue = Math.random();
+            if (randomValue < 0.66) {
+                // 66% 확률로 1~5 사이의 숫자 생성
+                waitingFruitNumber = Math.floor(Math.random() * 5) + 1;
+            } else {
+                // 34% 확률로 6~9 사이의 숫자 생성
+                waitingFruitNumber = Math.floor(Math.random() * 4) + 6;
+            }
+            
+            // document.getElementById('next-fruit-name').textContent = FRUITS[nextFruitIndex].name;
+            // const nextPreview = document.getElementById('next-preview');
+            // nextPreview.style.width = `${FRUITS[nextFruitIndex].radius * 1.5}px`;
+            // nextPreview.style.height = `${FRUITS[nextFruitIndex].radius * 1.5}px`;
+            // nextPreview.style.backgroundColor = FRUITS[nextFruitIndex].color;
+            // nextPreview.style.borderRadius = '50%';
+            
+            // 대기 중인 과일 업데이트
+            updateWaitingFruit();
+        }
+        
+        // 대기 중인 과일 업데이트 (HTML 요소)
+        function updateWaitingFruit() {
+            const fruit = FRUITS[nextFruitIndex];
+            
+            // 대기 중인 과일 스타일 설정
+            waitingFruitElement.style.width = `${fruit.radius * 2}px`;
+            waitingFruitElement.style.height = `${fruit.radius * 2}px`;
+            waitingFruitElement.style.backgroundColor = fruit.color;
+            waitingFruitElement.style.fontSize = `${fruit.radius * 0.8}px`;
+            waitingFruitElement.textContent = waitingFruitNumber; // 저장된 숫자 사용
+            waitingFruitElement.style.left = `${mouseX}px`;
+            waitingFruitElement.style.top = '100px';
+            
+            // 대기 중인 과일 표시
+            waitingFruitElement.style.display = canDropFruit ? 'flex' : 'none';
+        }
+
+        // 과일 생성
+        function createFruit(x, y, fruitIndex) {
+            const fruit = FRUITS[fruitIndex];
+            
+            // 랜덤 숫자 할당 (현재 과일이 없으면 대기 중인 과일의 숫자 사용, 있으면 새로운 랜덤 숫자 생성)
+            const randomNumber = (currentFruit === null) ? waitingFruitNumber : Math.floor(Math.random() * 9) + 1;
+            
+            const body = Bodies.circle(x, y, fruit.radius, {
+                restitution: 0.2, // 탄성 감소 (기존 0.3에서 0.2로)
+                friction: 10, // 마찰력 증가 
+                frictionAir: 0.005, // 공기 마찰력 증가 (기존 0.002에서 0.005로)
+                density: fruit.weight, // 과일 무게 사용
+                slop: 0.01, // 물체 간 겹침 허용 오차 감소
+                timeScale: 1.0, // 시간 스케일 정상화
+                render: {
+                    fillStyle: fruit.color,
+                    strokeStyle: fruit.color,
+                    lineWidth: 0
+                },
+                fruitIndex: fruitIndex,
+                number: randomNumber, // 랜덤 숫자 할당
+                id: Date.now() + Math.random() // 고유 ID 할당
+            });
+
+            // 과일 내부에 숫자 표시
+            const text = document.createElement('div');
+            text.style.position = 'absolute';
+            text.style.color = 'white';
+            text.style.fontWeight = 'bold';
+            text.style.fontSize = `${fruit.radius * 0.8}px`;
+            text.style.userSelect = 'none';
+            text.style.pointerEvents = 'none';
+            text.style.textAlign = 'center';
+            text.style.width = `${fruit.radius * 2}px`;
+            text.style.height = `${fruit.radius * 2}px`;
+            text.style.lineHeight = `${fruit.radius * 2}px`;
+            text.textContent = randomNumber; // 랜덤 숫자 할당
+            text.id = `text-${body.id}`;  // 고유 ID 부여
+            container.appendChild(text);
+
+            // 과일 위치에 따라 숫자 위치 업데이트
+            const updateTextPosition = function() {
+                const textElement = document.getElementById(`text-${body.id}`);
+                if (!textElement) {
+                    Events.off(engine, 'afterUpdate', updateTextPosition);
+                    return;
+                }
+                
+                if (body.position) {
+                    textElement.style.left = `${body.position.x - fruit.radius}px`;
+                    textElement.style.top = `${body.position.y - fruit.radius}px`;
+                } else {
+                    textElement.remove();
+                    Events.off(engine, 'afterUpdate', updateTextPosition);
+                }
+            };
+
+            Events.on(engine, 'afterUpdate', updateTextPosition);
+            
+            // 과일에 텍스트 ID 저장
+            body.textId = `text-${body.id}`;
+            
+            return body;
+        }
+
+        // 특수 무게추 생성 함수
+        function createSpecialWeight(x, y) {
+            const body = Bodies.circle(x, y, SPECIAL_WEIGHT.radius, {
+                restitution: 0.1, // 탄성 더 감소 (기존 0.2에서 0.1로)
+                friction: 10, // 높은 마찰력
+                frictionAir: 0.01, // 공기 마찰력 증가 (기존 0.001에서 0.01로)
+                density: SPECIAL_WEIGHT.weight, // 매우 무거운 무게
+                slop: 0.005, // 물체 간 겹침 허용 오차 더 감소
+                timeScale: 1.0, // 시간 스케일 정상화
+                render: {
+                    fillStyle: SPECIAL_WEIGHT.color,
+                    strokeStyle: SPECIAL_WEIGHT.color,
+                    lineWidth: 0
+                },
+                isSpecialWeight: true, // 특수 아이템 식별자
+                id: Date.now() + Math.random() // 고유 ID 할당
+            });
+
+            // 무게추 텍스트 표시
+            const text = document.createElement('div');
+            text.style.position = 'absolute';
+            text.style.color = 'white';
+            text.style.fontWeight = 'bold';
+            text.style.fontSize = `${SPECIAL_WEIGHT.radius * 0.6}px`;
+            text.style.userSelect = 'none';
+            text.style.pointerEvents = 'none';
+            text.style.textAlign = 'center';
+            text.style.width = `${SPECIAL_WEIGHT.radius * 2}px`;
+            text.style.height = `${SPECIAL_WEIGHT.radius * 2}px`;
+            text.style.lineHeight = `${SPECIAL_WEIGHT.radius * 2}px`;
+            text.textContent = '⚓'; // 무게추 아이콘
+            text.id = `text-${body.id}`;
+            container.appendChild(text);
+
+            // 무게추 위치에 따라 텍스트 위치 업데이트
+            const updateTextPosition = function() {
+                const textElement = document.getElementById(`text-${body.id}`);
+                if (!textElement) {
+                    Events.off(engine, 'afterUpdate', updateTextPosition);
+                    return;
+                }
+                
+                if (body.position) {
+                    textElement.style.left = `${body.position.x - SPECIAL_WEIGHT.radius}px`;
+                    textElement.style.top = `${body.position.y - SPECIAL_WEIGHT.radius}px`;
+                } else {
+                    textElement.remove();
+                    Events.off(engine, 'afterUpdate', updateTextPosition);
+                }
+            };
+
+            Events.on(engine, 'afterUpdate', updateTextPosition);
+            body.textId = `text-${body.id}`;
+            
+            return body;
+        }
+
+        // 과일 드롭
+        function dropFruit(x) {
+            if (!canDropFruit || isGameOver) return;
+
+            canDropFruit = false;
+            
+            // 대기 중인 과일 숨기기
+            waitingFruitElement.style.display = 'none';
+            
+            // 실제 물리 효과가 있는 과일 생성
+            currentFruit = createFruit(x, 100, nextFruitIndex);
+            World.add(engine.world, currentFruit);
+
+            // 다음 과일 준비
+            nextFruitIndex = 0; // 항상 체리(인덱스 0)만 선택
+            
+            // 일정 시간 후 다음 과일 드롭 가능
+            setTimeout(() => {
+                canDropFruit = true;
+                currentFruit = null;
+                
+                // 다음 과일 표시 업데이트
+                updateNextFruit();
+            }, 500);
+        }
+
+        // 특수 무게추 드롭 함수
+        function dropSpecialWeight(x, y) {
+            if (!SPECIAL_WEIGHT.available || isGameOver) return;
+
+            // 무게추 생성 및 추가
+            const weight = createSpecialWeight(x, y);
+            World.add(engine.world, weight);
+            
+            // 쿨다운 시작
+            SPECIAL_WEIGHT.available = false;
+            specialItemUI.style.opacity = '0.5';
+            specialItemUI.textContent = '충전 중';
+            
+            // 쿨다운 애니메이션
+            cooldownOverlay.style.display = 'block';
+            cooldownOverlay.style.height = '100%';
+            
+            // 쿨다운 애니메이션
+            let cooldownTime = SPECIAL_WEIGHT.cooldown;
+            const startTime = Date.now();
+            
+            const updateCooldown = function() {
+                const elapsed = Date.now() - startTime;
+                const remaining = Math.max(0, cooldownTime - elapsed);
+                const progress = (remaining / cooldownTime) * 100;
+                
+                cooldownOverlay.style.height = `${progress}%`;
+                
+                if (remaining > 0) {
+                    requestAnimationFrame(updateCooldown);
+                } else {
+                    // 쿨다운 완료
+                    SPECIAL_WEIGHT.available = true;
+                    specialItemUI.style.opacity = '1';
+                    specialItemUI.textContent = '무게추\n준비됨';
+                    cooldownOverlay.style.display = 'none';
+                }
+            };
+            
+            updateCooldown();
+        }
+
+        // 마우스 이벤트
+        document.addEventListener('mousemove', function(e) {
+            // 마우스 위치 계산 및 제한
+            const rect = container.getBoundingClientRect();
+            if (e.clientX >= rect.left && e.clientX <= rect.right) {
+                mouseX = e.clientX - rect.left;
+                mouseX = Math.max(40, Math.min(mouseX, containerWidth - 40));
+                
+                // 대기 중인 과일 위치 업데이트
+                if (canDropFruit) {
+                    updateWaitingFruit();
+                }
+                
+                // 다음 과일 미리보기 위치 업데이트 (가로 위치만)
+                const nextPreview = document.getElementById('next-preview');
+                if (nextPreview) {
+                    const width = parseInt(nextPreview.style.width || '0');
+                    nextPreview.style.left = `${mouseX - width / 2}px`;
+                }
+            }
+        });
+
+        // 터치 이벤트 추가
+        document.addEventListener('touchmove', function(e) {
+            // 스크롤 방지
+            e.preventDefault();
+            
+            // 터치 위치 계산 및 제한
+            if (e.touches && e.touches[0]) {
+                const touch = e.touches[0];
+                const rect = container.getBoundingClientRect();
+                
+                if (touch.clientX >= rect.left && touch.clientX <= rect.right) {
+                    mouseX = touch.clientX - rect.left;
+                    mouseX = Math.max(40, Math.min(mouseX, containerWidth - 40));
+                    
+                    // 대기 중인 과일 위치 업데이트
+                    if (canDropFruit) {
+                        updateWaitingFruit();
+                    }
+                    
+                    // 다음 과일 미리보기 위치 업데이트 (가로 위치만)
+                    const nextPreview = document.getElementById('next-preview');
+                    if (nextPreview) {
+                        const width = parseInt(nextPreview.style.width || '0');
+                        nextPreview.style.left = `${mouseX - width / 2}px`;
+                    }
+                }
+            }
+        }, { passive: false });
+
+        container.addEventListener('click', function(e) {
+            if (canDropFruit) {
+                dropFruit(mouseX);
+            }
+        });
+
+        // 터치 이벤트로 과일 드롭
+        container.addEventListener('touchend', function(e) {
+            if (canDropFruit) {
+                dropFruit(mouseX);
+            }
+        });
+
+        // 키보드 이벤트 추가 (스페이스바로 특수 무게추 사용)
+        document.addEventListener('keydown', function(e) {
+            if (e.code === 'Space' && SPECIAL_WEIGHT.available) {
+                dropSpecialWeight(mouseX, 100);
+                e.preventDefault(); // 페이지 스크롤 방지
+            }
+        });
+        
+        // 특수 아이템 드래그 앤 드롭 구현
+        let isDragging = false;
+        let dragOffsetX = 0;
+        let dragOffsetY = 0;
+        let dragClone = null;
+        
+        // 마우스 드래그 시작
+        specialItemUI.addEventListener('mousedown', function(e) {
+            if (!SPECIAL_WEIGHT.available || isGameOver) return;
+            
+            isDragging = true;
+            specialItemUI.classList.add('dragging');
+            
+            // 드래그 오프셋 계산 (클릭 위치와 버튼 위치의 차이)
+            const rect = specialItemUI.getBoundingClientRect();
+            dragOffsetX = e.clientX - rect.left;
+            dragOffsetY = e.clientY - rect.top;
+            
+            // 드래그 중인 아이템 복제본 생성
+            createDragClone('⚓', e.clientX, e.clientY);
+            
+            e.preventDefault();
+        });
+        
+        // 터치 드래그 시작
+        specialItemUI.addEventListener('touchstart', function(e) {
+            if (!SPECIAL_WEIGHT.available || isGameOver) return;
+            
+            isDragging = true;
+            specialItemUI.classList.add('dragging');
+            
+            // 터치 위치 가져오기
+            const touch = e.touches[0];
+            
+            // 드래그 오프셋 계산 (터치 위치와 버튼 위치의 차이)
+            const rect = specialItemUI.getBoundingClientRect();
+            dragOffsetX = touch.clientX - rect.left;
+            dragOffsetY = touch.clientY - rect.top;
+            
+            // 드래그 중인 아이템 복제본 생성
+            createDragClone('⚓', touch.clientX, touch.clientY);
+            
+            e.preventDefault();
+        });
+        
+        // 드래그 복제본 생성 함수
+        function createDragClone(text, x, y) {
+            dragClone = document.createElement('div');
+            dragClone.style.position = 'absolute';
+            dragClone.style.width = '80px';
+            dragClone.style.height = '80px';
+            dragClone.style.borderRadius = '50%';
+            dragClone.style.backgroundColor = '#555555';
+            dragClone.style.display = 'flex';
+            dragClone.style.justifyContent = 'center';
+            dragClone.style.alignItems = 'center';
+            dragClone.style.color = 'white';
+            dragClone.style.fontWeight = 'bold';
+            dragClone.style.fontSize = '14px';
+            dragClone.style.zIndex = '1000';
+            dragClone.style.pointerEvents = 'none';
+            dragClone.style.opacity = '0.7';
+            dragClone.style.textAlign = 'center';
+            dragClone.textContent = text;
+            document.body.appendChild(dragClone);
+            
+            // 초기 위치 설정
+            dragClone.style.left = (x - dragOffsetX) + 'px';
+            dragClone.style.top = (y - dragOffsetY) + 'px';
+        }
+        
+        // 마우스 드래그 중
+        document.addEventListener('mousemove', function(e) {
+            if (!isDragging) return;
+            
+            // 드래그 중인 아이템 위치 업데이트
+            dragClone.style.left = (e.clientX - dragOffsetX) + 'px';
+            dragClone.style.top = (e.clientY - dragOffsetY) + 'px';
+            
+            e.preventDefault();
+        });
+        
+        // 터치 드래그 중
+        document.addEventListener('touchmove', function(e) {
+            if (!isDragging) return;
+            
+            // 터치 위치 가져오기
+            const touch = e.touches[0];
+            
+            // 드래그 중인 아이템 위치 업데이트
+            dragClone.style.left = (touch.clientX - dragOffsetX) + 'px';
+            dragClone.style.top = (touch.clientY - dragOffsetY) + 'px';
+            
+            e.preventDefault();
+        });
+        
+        // 마우스 드래그 종료
+        document.addEventListener('mouseup', function(e) {
+            if (!isDragging) return;
+            
+            finishDrag(e.clientX, e.clientY);
+        });
+        
+        // 터치 드래그 종료
+        document.addEventListener('touchend', function(e) {
+            if (!isDragging) return;
+            
+            // 마지막 터치 위치 가져오기
+            const touch = e.changedTouches[0];
+            finishDrag(touch.clientX, touch.clientY);
+        });
+        
+        // 드래그 종료 처리 함수
+        function finishDrag(clientX, clientY) {
+            isDragging = false;
+            specialItemUI.classList.remove('dragging');
+            
+            // 게임 영역 내에 드롭되었는지 확인
+            const gameRect = container.getBoundingClientRect();
+            if (
+                clientX >= gameRect.left && 
+                clientX <= gameRect.right && 
+                clientY >= gameRect.top && 
+                clientY <= gameRect.bottom
+            ) {
+                // 게임 영역 내 상대 좌표 계산
+                const x = clientX - gameRect.left;
+                const y = clientY - gameRect.top;
+                
+                // 무게추 드롭
+                dropSpecialWeight(x, y);
+            }
+            
+            // 드래그 복제본 제거
+            if (dragClone) {
+                dragClone.remove();
+                dragClone = null;
+            }
+        }
+        
+        // 드래그 취소 (마우스가 창 밖으로 나갔을 때)
+        document.addEventListener('mouseleave', function() {
+            if (isDragging) {
+                isDragging = false;
+                specialItemUI.classList.remove('dragging');
+                
+                if (dragClone) {
+                    dragClone.remove();
+                    dragClone = null;
+                }
+            }
+        });
+
+        // 주기적으로 모든 과일 그룹 확인 (0.1초마다)
+        setInterval(checkFruitGroups, 100);
+        
+        // 충돌 이벤트 감지
+        Events.on(engine, 'collisionStart', function(event) {
+            if (isGameOver) return;
+            
+            // 충돌이 발생하면 즉시 과일 그룹 확인
+            checkFruitGroups();
+        });
+        
+        // 과일 그룹 확인 및 합치기 함수
+        function checkFruitGroups() {
+            if (isGameOver) return;
+            
+            // 모든 과일 가져오기
+            const bodies = Composite.allBodies(engine.world);
+            const fruits = bodies.filter(body => body.fruitIndex !== undefined);
+            
+            // 과일이 2개 미만이면 처리할 필요 없음
+            if (fruits.length < 2) return;
+            
+            // 모든 과일 그룹 찾기
+            const allGroups = findAllFruitGroups(fruits);
+            
+            // 각 그룹 내에서 같은 과일 종류의 숫자 합이 10인 과일 찾기
+            let mergedAny = false;
+            
+            allGroups.forEach(group => {
+                if (group.length > 1) {
+                    // 같은 종류의 과일끼리 그룹화
+                    const fruitTypeGroups = {};
+                    
+                    group.forEach(fruit => {
+                        const key = `${fruit.fruitIndex}`;
+                        if (!fruitTypeGroups[key]) {
+                            fruitTypeGroups[key] = [];
+                        }
+                        fruitTypeGroups[key].push(fruit);
+                    });
+                    
+                    // 같은 종류의 과일 중 합이 10인 그룹 찾기
+                    for (const key in fruitTypeGroups) {
+                        const sameTypeGroup = fruitTypeGroups[key];
+                        if (sameTypeGroup.length >= 2) {
+                            // 모든 가능한 부분 그룹 찾기
+                            const subgroups = findSubgroupsWithSum10(sameTypeGroup);
+                            
+                            // 이미 처리된 과일 추적
+                            const processedFruits = new Set();
+                            
+                            // 부분 그룹 합치기 (가장 큰 부분 그룹부터)
+                            subgroups.sort((a, b) => b.length - a.length);
+                            
+                            for (const subgroup of subgroups) {
+                                // 이미 처리된 과일이 있는지 확인
+                                const alreadyProcessed = subgroup.some(fruit => processedFruits.has(fruit.id));
+                                if (alreadyProcessed) continue;
+                                
+                                // 디버깅: 부분 그룹 정보 출력
+                                const fruitType = FRUITS[subgroup[0].fruitIndex].name;
+                                const subNumbers = subgroup.map(fruit => fruit.number).join('+');
+                                console.log(`같은 종류(${fruitType})의 과일 중 합이 10인 그룹 발견: ${subNumbers} = 10`);
+                                
+                                // 부분 그룹 합치기
+                                mergeFruits(subgroup);
+                                mergedAny = true;
+                                
+                                // 처리된 과일 표시
+                                subgroup.forEach(fruit => processedFruits.add(fruit.id));
+                            }
+                        }
+                    }
+                }
+            });
+            
+            // 과일이 합쳐졌으면 다시 검사 (연쇄 반응을 위해)
+            if (mergedAny) {
+                setTimeout(checkFruitGroups, 100);
+            }
+        }
+        
+        // 그룹 내에서 합이 10이 되는 부분 그룹 찾기
+        function findSubgroupsWithSum10(group) {
+            const subgroups = [];
+            
+            // 모든 과일 쌍에 대해 접촉 여부 확인
+            const adjacencyMatrix = Array(group.length).fill().map(() => Array(group.length).fill(false));
+            
+            for (let i = 0; i < group.length; i++) {
+                for (let j = i + 1; j < group.length; j++) {
+                    if (areFruitsTouching(group[i], group[j])) {
+                        adjacencyMatrix[i][j] = true;
+                        adjacencyMatrix[j][i] = true;
+                    }
+                }
+            }
+            
+            // 모든 가능한 부분 그룹 찾기
+            const findConnectedSubgroups = (startIdx, visited = new Set(), currentGroup = []) => {
+                visited.add(startIdx);
+                currentGroup.push(group[startIdx]);
+                
+                // 현재 부분 그룹의 합 계산
+                const sum = currentGroup.reduce((total, fruit) => total + fruit.number, 0);
+                
+                // 합이 10이면 부분 그룹 추가
+                if (sum === 10) {
+                    subgroups.push([...currentGroup]);
+                }
+                
+                // 합이 10보다 작으면 계속 탐색
+                if (sum < 10) {
+                    for (let i = 0; i < group.length; i++) {
+                        if (!visited.has(i) && adjacencyMatrix[startIdx][i]) {
+                            findConnectedSubgroups(i, new Set([...visited]), [...currentGroup]);
+                        }
+                    }
+                }
+            };
+            
+            // 모든 과일에서 시작하여 부분 그룹 찾기
+            for (let i = 0; i < group.length; i++) {
+                findConnectedSubgroups(i, new Set(), []);
+            }
+            
+            // 중복 제거 (동일한 과일 조합은 하나만 유지)
+            const uniqueSubgroups = [];
+            const seen = new Set();
+            
+            for (const subgroup of subgroups) {
+                // 과일 ID를 정렬하여 고유 키 생성
+                const key = subgroup.map(fruit => fruit.id).sort().join(',');
+                if (!seen.has(key)) {
+                    seen.add(key);
+                    uniqueSubgroups.push(subgroup);
+                }
+            }
+            
+            return uniqueSubgroups;
+        }
+        
+        // 모든 과일 그룹 찾기 함수
+        function findAllFruitGroups(fruits) {
+            // 과일 간의 접촉 여부를 저장하는 인접 행렬
+            const adjacencyMatrix = Array(fruits.length).fill().map(() => Array(fruits.length).fill(false));
+            
+            // 모든 과일 쌍에 대해 접촉 여부 확인
+            for (let i = 0; i < fruits.length; i++) {
+                for (let j = i + 1; j < fruits.length; j++) {
+                    if (areFruitsTouching(fruits[i], fruits[j])) {
+                        adjacencyMatrix[i][j] = true;
+                        adjacencyMatrix[j][i] = true;
+                    }
+                }
+            }
+            
+            // 방문 여부 추적
+            const visited = Array(fruits.length).fill(false);
+            const allGroups = [];
+            
+            // 모든 과일에 대해 연결된 그룹 찾기
+            for (let i = 0; i < fruits.length; i++) {
+                if (!visited[i]) {
+                    const group = [];
+                    dfs(i, visited, adjacencyMatrix, fruits, group);
+                    if (group.length > 0) {
+                        allGroups.push(group);
+                    }
+                }
+            }
+            
+            return allGroups;
+        }
+        
+        // DFS로 연결된 과일 그룹 찾기
+        function dfs(index, visited, adjacencyMatrix, fruits, group) {
+            visited[index] = true;
+            group.push(fruits[index]);
+            
+            for (let i = 0; i < fruits.length; i++) {
+                if (adjacencyMatrix[index][i] && !visited[i]) {
+                    dfs(i, visited, adjacencyMatrix, fruits, group);
+                }
+            }
+        }
+        
+        // 두 과일이 접촉 중인지 확인
+        function areFruitsTouching(fruitA, fruitB) {
+            const dx = fruitB.position.x - fruitA.position.x;
+            const dy = fruitB.position.y - fruitA.position.y;
+            const distance = Math.sqrt(dx * dx + dy * dy);
+            
+            // 두 과일의 반지름 합
+            const radiusSum = FRUITS[fruitA.fruitIndex].radius + FRUITS[fruitB.fruitIndex].radius;
+            
+            // 거리가 반지름 합보다 작거나 같으면 접촉 중
+            return distance <= radiusSum + 5; // 5픽셀 여유 추가
+        }
+        
+        // 과일 합치기 함수
+        function mergeFruits(group) {
+            // 그룹의 중심 위치 계산
+            let centerX = 0;
+            let centerY = 0;
+            group.forEach(fruit => {
+                centerX += fruit.position.x;
+                centerY += fruit.position.y;
+            });
+            centerX /= group.length;
+            centerY /= group.length;
+            
+            // 텍스트 요소 제거
+            group.forEach(fruit => {
+                if (fruit.textId) {
+                    const text = document.getElementById(fruit.textId);
+                    if (text) text.remove();
+                }
+                
+                // 과일 제거
+                World.remove(engine.world, fruit);
+            });
+            
+            // 현재 과일보다 한 단계 큰 과일 생성
+            const currentFruitIndex = group[0].fruitIndex;
+            const nextFruitIndex = Math.min(currentFruitIndex + 1, FRUITS.length - 1);
+            const newFruit = createFruit(centerX, centerY, nextFruitIndex);
+            World.add(engine.world, newFruit);
+            
+            // 점수 업데이트
+            const bonusScore = 100 + (group.length * 10); // 기본 100점 + 과일당 10점
+            score += bonusScore;
+            document.getElementById('score').textContent = `점수: ${score}`;
+            
+            // 합쳐진 과일 로그
+            console.log(`과일 합치기 완료! 보너스 점수: ${bonusScore}`);
+        }
+
+        // 게임 오버 체크
+        Events.on(engine, 'afterUpdate', function() {
+            if (isGameOver) return;
+            
+            const bodies = Composite.allBodies(engine.world);
+            const fruits = bodies.filter(body => body.fruitIndex !== undefined);
+            
+            // 과일이 상단에 오래 머물러 있는지 확인
+            for (let i = 0; i < fruits.length; i++) {
+                const fruit = fruits[i];
+                
+                // 과일이 상단에 있고 움직임이 거의 없는 경우
+                if (fruit.position.y < 120 && Math.abs(fruit.velocity.y) < 0.05 && fruit.position.x > 30 && fruit.position.x < containerWidth - 30) {
+                    if (!fruit.stableTime) {
+                        fruit.stableTime = Date.now();
+                    } else if (Date.now() - fruit.stableTime > 5000) { // 5초 이상 상단에 머물러 있으면 게임 오버
+                        // 추가 검증: 주변에 다른 과일이 있는지 확인
+                        let nearbyFruits = 0;
+                        for (let j = 0; j < fruits.length; j++) {
+                            const otherFruit = fruits[j];
+                            if (otherFruit.id !== fruit.id) {
+                                const dx = otherFruit.position.x - fruit.position.x;
+                                const dy = otherFruit.position.y - fruit.position.y;
+                                const distance = Math.sqrt(dx * dx + dy * dy);
+                                // 과일의 반지름을 이용해 거리 계산
+                                const fruitRadius = FRUITS[fruit.fruitIndex].radius;
+                                if (distance < fruitRadius * 3) {
+                                    nearbyFruits++;
+                                }
+                            }
+                        }
+                        
+                        // 주변에 과일이 없으면 게임오버
+                        if (nearbyFruits < 1) {
+                            isGameOver = true;
+                            document.getElementById('game-over').style.display = 'block';
+                            document.getElementById('restart-button').style.display = 'block';
+                            break;
+                        } else {
+                            // 주변에 과일이 있으면 안정 시간 초기화
+                            fruit.stableTime = Date.now();
+                        }
+                    }
+                } else {
+                    fruit.stableTime = null;
+                }
+            }
+        });
+
+        // 게임 초기화 함수
+        function initGame() {
+            // 기존 과일 모두 제거
+            const bodies = Composite.allBodies(engine.world);
+            bodies.forEach(body => {
+                if (body.fruitIndex !== undefined) {
+                    // 텍스트 요소 제거
+                    if (body.textId) {
+                        const text = document.getElementById(body.textId);
+                        if (text) text.remove();
+                    }
+                    World.remove(engine.world, body);
+                }
+            });
+            
+            // 점수 초기화
+            score = 0;
+            document.getElementById('score').textContent = `점수: ${score}`;
+            
+            // 게임 오버 상태 초기화
+            isGameOver = false;
+            document.getElementById('game-over').style.display = 'none';
+            document.getElementById('restart-button').style.display = 'none';
+            
+            // 대기 과일 초기화
+            nextFruitIndex = 0; // 항상 체리(인덱스 0)만 선택
+            waitingFruitNumber = Math.floor(Math.random() * 9) + 1; // 새로운 대기 과일에 대한 랜덤 숫자 할당
+            updateWaitingFruit();
+            
+            // 드롭 가능 상태로 설정
+            canDropFruit = true;
+        }
+        
+        // 다시 시작 버튼 이벤트 리스너
+        document.getElementById('restart-button').addEventListener('click', function() {
+            initGame();
+        });
+        
+        // 게임 초기화
+        initGame();
+
+        // 디버깅 메시지
+        console.log('게임 초기화 완료');
+        
+        // 모바일 디바이스에서 확대/축소 방지
+        document.addEventListener('touchstart', function(e) {
+            if (e.touches.length > 1) {
+                e.preventDefault();
+            }
+        }, { passive: false });
+        
+        // 더블 탭 확대 방지
+        let lastTapTime = 0;
+        document.addEventListener('touchend', function(e) {
+            const currentTime = new Date().getTime();
+            const tapLength = currentTime - lastTapTime;
+            if (tapLength < 500 && tapLength > 0) {
+                e.preventDefault();
+            }
+            lastTapTime = currentTime;
+        }, { passive: false });
+
+        // 초기화
+        updateNextFruit();
+    </script>
+</body>
+</html>
