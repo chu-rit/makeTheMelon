@@ -197,6 +197,12 @@ export default class MainScene extends Phaser.Scene {
     // 바디 교체
     fruit.setExistingBody(customBody);
 
+    // 초기 속도 설정 (느리게 시작)
+    Body.setVelocity(fruit.body, { x: 0, y: 0.5 });
+    
+    // 중력 강화 (가속도 빠르게)
+    fruit.body.gravityScale = 3;
+
     // 과일 정보 저장
     fruit.radius = radius;
     fruit.level = dropLevel;
@@ -673,6 +679,84 @@ export default class MainScene extends Phaser.Scene {
     }
     this.score += scoreToAdd;
     this.scoreText.setText(this.score);
+
+    // 합쳐지는 이펙트 추가
+    this.createMergeEffect(x, y, fruitConfig.color, radius);
+  }
+
+  createMergeEffect(x, y, color, radius) {
+    // 파티클 이펙트 생성
+    for (let i = 0; i < 12; i++) {
+      const angle = (i / 12) * Math.PI * 2;
+      
+      const particle = this.add.circle(x, y, 4, color);
+      particle.setDepth(15);
+      
+      this.tweens.add({
+        targets: particle,
+        x: x + Math.cos(angle) * (radius + 40),
+        y: y + Math.sin(angle) * (radius + 40),
+        alpha: 0,
+        duration: 600,
+        ease: 'Power2.easeOut',
+        onComplete: () => {
+          particle.destroy();
+        }
+      });
+    }
+
+    // 중심 원형 펄스 이펙트
+    const pulseCircle = this.add.circle(x, y, radius * 0.8, color);
+    pulseCircle.setAlpha(0.6);
+    pulseCircle.setDepth(14);
+    
+    this.tweens.add({
+      targets: pulseCircle,
+      scaleX: 1.5,
+      scaleY: 1.5,
+      alpha: 0,
+      duration: 400,
+      ease: 'Power2.easeOut',
+      onComplete: () => {
+        pulseCircle.destroy();
+      }
+    });
+
+    // 충격파 이펙트 (여러 개의 확장하는 원)
+    for (let i = 0; i < 4; i++) {
+      this.time.delayedCall(i * 80, () => {
+        const shockwave = this.add.circle(x, y, radius * 0.3, 0xffffff);
+        shockwave.setAlpha(0.8);
+        shockwave.setDepth(13);
+        shockwave.setStrokeStyle(3, color);
+        
+        this.tweens.add({
+          targets: shockwave,
+          scaleX: 4,
+          scaleY: 4,
+          alpha: 0,
+          duration: 600,
+          ease: 'Quad.easeOut',
+          onComplete: () => {
+            shockwave.destroy();
+          }
+        });
+      });
+    }
+
+    // 새 과일 텍스트만 스케일 애니메이션 (물리 바디는 건드리지 않음)
+    const lastFruit = this.fruits[this.fruits.length - 1];
+    if (lastFruit && lastFruit.fruitText) {
+      lastFruit.fruitText.setScale(0.7);
+      
+      this.tweens.add({
+        targets: lastFruit.fruitText,
+        scaleX: 1,
+        scaleY: 1,
+        duration: 300,
+        ease: 'Back.easeOut'
+      });
+    }
   }
 
   updatePreview(mouseX, mouseY) {
