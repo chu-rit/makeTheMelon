@@ -32,7 +32,10 @@ const GameContainer = () => {
             touchAction: 'none',
             display: 'flex',
             justifyContent: 'center',
-            alignItems: 'center'
+            alignItems: 'center',
+            maxWidth: '720px',
+            maxHeight: '1280px',
+            margin: '0 auto'
           }} 
         />
       ) : (
@@ -48,6 +51,9 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#fff5e1',
+    display: 'flex',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
   fallbackContainer: {
     flex: 1,
