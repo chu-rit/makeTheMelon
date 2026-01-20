@@ -70,7 +70,7 @@ export default class MainScene extends Phaser.Scene {
     createStyledWall(width - (wallThickness / 2), height / 2, wallThickness, height, 'rightWall');
 
     // [테스트용] 중간 바닥 - 테스트 후 주석 해제하여 제거
-    // createStyledWall(width / 2, 600, width, wallThickness, 'testFloor');
+    createStyledWall(width / 2, 600, width, wallThickness, 'testFloor');
 
     // 3. UI: 따뜻한 톤의 점수 텍스트
     this.score = 0;
@@ -118,6 +118,7 @@ export default class MainScene extends Phaser.Scene {
 
     // 3. 미리보기 과일 생성
     this.previewGraphics = this.add.graphics();
+    this.previewSprite = null; // 스프라이트 변수 초기화 (재시작 시 에러 방지)
     this.previewText = this.add.text(0, 0, '', {
       fontSize: '30px',
       color: '#ffffff',
@@ -420,63 +421,145 @@ export default class MainScene extends Phaser.Scene {
     this.isGameOver = true;
     console.log('게임오버! 최종 점수:', this.score);
 
-    // 어두운 배경 표시
-    const darkBackground = this.add.rectangle(this.scale.width / 2, this.scale.height / 2, this.scale.width, this.scale.height, 0x000000, 0.7);
-    darkBackground.setDepth(99);
-
-    // 게임오버 텍스트 표시
-    const gameOverText = this.add.text(this.scale.width / 2, this.scale.height / 2 - 50, 'GAME OVER', {
-      fontSize: '80px',
-      color: '#ff0000',
-      fontFamily: 'Arial',
-      fontWeight: 'bold',
-      align: 'center'
+    // 1. 어두운 배경 (페이드 인)
+    const overlay = this.add.rectangle(this.scale.width / 2, this.scale.height / 2, this.scale.width, this.scale.height, 0x000000);
+    overlay.setDepth(90);
+    overlay.setAlpha(0);
+    
+    this.tweens.add({
+      targets: overlay,
+      alpha: 0.7,
+      duration: 500
     });
-    gameOverText.setOrigin(0.5, 0.5);
-    gameOverText.setDepth(100);
 
-    // 최종 점수 표시
-    const finalScoreText = this.add.text(this.scale.width / 2, this.scale.height / 2 + 50, '점수: ' + this.score, {
-      fontSize: '48px',
-      color: '#ff0000',
-      fontFamily: 'Arial',
+    // 2. 메인 패널 (팝업)
+    const panelX = this.scale.width / 2;
+    const panelY = this.scale.height / 2;
+    const panelW = 420;
+    const panelH = 360;
+    
+    const panel = this.add.container(panelX, panelY);
+    panel.setDepth(100);
+    panel.setScale(0); // 팝업 효과를 위해 크기 0에서 시작
+
+    // 패널 배경 (흰색 둥근 사각형 + 그림자)
+    const panelBg = this.add.graphics();
+    // 그림자
+    panelBg.fillStyle(0x000000, 0.3);
+    panelBg.fillRoundedRect(-panelW/2 + 8, -panelH/2 + 8, panelW, panelH, 25);
+    // 본체
+    panelBg.fillStyle(0xffffff, 1);
+    panelBg.fillRoundedRect(-panelW/2, -panelH/2, panelW, panelH, 25);
+    // 테두리
+    panelBg.lineStyle(4, 0xffd700, 1); // 골드 테두리
+    panelBg.strokeRoundedRect(-panelW/2, -panelH/2, panelW, panelH, 25);
+    panel.add(panelBg);
+
+    // 3. 타이틀 텍스트
+    const titleText = this.add.text(0, -100, 'GAME OVER', {
+      fontSize: '52px',
+      color: '#ff4444',
+      fontFamily: 'Arial Black',
       fontWeight: 'bold',
-      align: 'center'
-    });
-    finalScoreText.setOrigin(0.5, 0.5);
-    finalScoreText.setDepth(100);
+      stroke: '#ffffff',
+      strokeThickness: 6
+    }).setOrigin(0.5);
+    // 타이틀 그림자
+    titleText.setShadow(3, 3, 'rgba(0,0,0,0.3)', 2, true, true);
+    panel.add(titleText);
 
-    // 재시작 버튼 표시
-    const restartButtonX = this.scale.width / 2;
-    const restartButtonY = this.scale.height / 2 + 150;
-    const buttonWidth = 200;
-    const buttonHeight = 60;
+    // 4. 점수 레이블
+    const scoreLabel = this.add.text(0, -20, 'FINAL SCORE', {
+      fontSize: '24px',
+      color: '#555555',
+      fontFamily: 'Arial',
+      fontWeight: 'bold'
+    }).setOrigin(0.5);
+    panel.add(scoreLabel);
 
+    // 5. 점수 (카운트 업 효과)
+    const scoreText = this.add.text(0, 35, '0', {
+      fontSize: '64px',
+      color: '#333333',
+      fontFamily: 'Arial Black',
+      fontWeight: 'bold'
+    }).setOrigin(0.5);
+    panel.add(scoreText);
+
+    // 6. 재시작 버튼
+    const btnW = 220;
+    const btnH = 65;
+    const btnY = 120;
+    
+    const buttonContainer = this.add.container(0, btnY);
+    
     // 버튼 배경
-    const restartButtonBg = this.add.rectangle(restartButtonX, restartButtonY, buttonWidth, buttonHeight, 0x4CAF50);
-    restartButtonBg.setDepth(100);
-
-    // 버튼 텍스트
-    const restartButtonText = this.add.text(restartButtonX, restartButtonY, '재시작', {
+    const btnBg = this.add.graphics();
+    btnBg.fillStyle(0x4CAF50, 1); // 기본 녹색
+    btnBg.fillRoundedRect(-btnW/2, -btnH/2, btnW, btnH, 15);
+    
+    const btnText = this.add.text(0, 0, 'RETRY', {
       fontSize: '32px',
       color: '#ffffff',
       fontFamily: 'Arial',
-      fontWeight: 'bold',
-      align: 'center'
-    });
-    restartButtonText.setOrigin(0.5, 0.5);
-    restartButtonText.setDepth(101);
+      fontWeight: 'bold'
+    }).setOrigin(0.5);
+    
+    buttonContainer.add([btnBg, btnText]);
+    
+    // 버튼 인터랙션 영역 (Zone 사용)
+    const btnZone = this.add.zone(0, 0, btnW, btnH).setInteractive();
+    buttonContainer.add(btnZone);
 
-    // 버튼 클릭 이벤트
-    restartButtonBg.setInteractive();
-    restartButtonBg.on('pointerover', () => {
-      restartButtonBg.setFillStyle(0x45a049);
+    btnZone.on('pointerover', () => {
+      this.tweens.add({
+        targets: buttonContainer,
+        scaleX: 1.1,
+        scaleY: 1.1,
+        duration: 100
+      });
+      btnBg.clear();
+      btnBg.fillStyle(0x66BB6A, 1); // 밝은 녹색
+      btnBg.fillRoundedRect(-btnW/2, -btnH/2, btnW, btnH, 15);
     });
-    restartButtonBg.on('pointerout', () => {
-      restartButtonBg.setFillStyle(0x4CAF50);
+    
+    btnZone.on('pointerout', () => {
+      this.tweens.add({
+        targets: buttonContainer,
+        scaleX: 1,
+        scaleY: 1,
+        duration: 100
+      });
+      btnBg.clear();
+      btnBg.fillStyle(0x4CAF50, 1); // 기본 녹색
+      btnBg.fillRoundedRect(-btnW/2, -btnH/2, btnW, btnH, 15);
     });
-    restartButtonBg.on('pointerdown', () => {
+    
+    btnZone.on('pointerdown', () => {
       this.scene.restart();
+    });
+    
+    panel.add(buttonContainer);
+
+    // 7. 패널 팝업 애니메이션
+    this.tweens.add({
+      targets: panel,
+      scaleX: 1,
+      scaleY: 1,
+      duration: 500,
+      ease: 'Back.easeOut'
+    });
+
+    // 8. 점수 카운트 업 애니메이션
+    this.tweens.addCounter({
+      from: 0,
+      to: this.score,
+      duration: 1500,
+      ease: 'Power2.easeOut',
+      onUpdate: (tween) => {
+        const value = Math.round(tween.getValue());
+        scoreText.setText(value.toLocaleString());
+      }
     });
   }
 
@@ -777,7 +860,8 @@ export default class MainScene extends Phaser.Scene {
     }
 
     // 스프라이트 기반 미리보기 (텍스처 사용)
-    if (!this.previewSprite) {
+    // sprite.scene이 없으면 destroyed된 상태이므로 새로 생성해야 함
+    if (!this.previewSprite || !this.previewSprite.active || !this.previewSprite.scene) {
       this.previewSprite = this.add.sprite(mouseX, mouseY, `fruit_${this.previewLevel}`);
       this.previewSprite.setOrigin(0.5, 0.5);
       this.previewSprite.setDepth(5);

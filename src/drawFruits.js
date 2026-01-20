@@ -18,6 +18,13 @@ export function createFruitTextures(scene) {
 
   fruitDrawers.forEach((drawer, index) => {
     if (drawer) {
+      const key = `fruit_${index}`;
+      
+      // 이미 텍스처가 존재하면 제거하고 다시 생성 (새로운 스타일 적용 및 충돌 방지)
+      if (scene.textures.exists(key)) {
+        scene.textures.remove(key);
+      }
+
       const canvas = document.createElement('canvas');
       canvas.width = 400;
       canvas.height = 400;
@@ -40,10 +47,12 @@ export function createFruitTextures(scene) {
       shadowCtx.arc(cx, cy, bgRadius, 0, Math.PI * 2);
       shadowCtx.fill();
       
-      const texture = scene.textures.createCanvas(`fruit_${index}`, canvas.width, canvas.height);
-      const ctx = texture.getContext();
-      ctx.drawImage(canvas, 0, 0);
-      texture.refresh();
+      const texture = scene.textures.createCanvas(key, canvas.width, canvas.height);
+      if (texture) {
+        const ctx = texture.getContext();
+        ctx.drawImage(canvas, 0, 0);
+        texture.refresh();
+      }
     }
   });
 }
