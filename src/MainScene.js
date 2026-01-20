@@ -180,7 +180,7 @@ export default class MainScene extends Phaser.Scene {
 
     // 스프라이트 기반 과일 생성
     const fruit = this.add.sprite(dropX, dropY, `fruit_${dropLevel}`);
-    fruit.setScale(radius / 200); // 텍스처 크기(400)의 절반인 200을 기준으로 스케일 조정
+    fruit.setScale(radius / 170); // 텍스처 여백을 고려하여 스케일 약간 확대 (물리 바디와 시각적 크기 일치)
     fruit.setOrigin(0.5, 0.5);
 
     // Matter.js 물리 적용 (원형 바디 사용, 반지름을 정확히 설정)
@@ -280,10 +280,9 @@ export default class MainScene extends Phaser.Scene {
   }
 
   updateDropFruitLevel() {
-    // 최대 레벨이 3 이상이면, 레벨 1 ~ 최대 레벨 - 2 범위의 과일 떨어트리기
-    // 최대 레벨이 1 또는 2이면, 레벨 1의 과일만 떨어트리기
+    // 최대 레벨까지의 모든 과일을 떨어트릴 수 있음
     const newMinLevel = 1;
-    const newMaxLevel = Math.max(1, this.maxFruitLevel - 2);
+    const newMaxLevel = this.maxFruitLevel;
     
     if (newMinLevel !== this.minDropLevel || newMaxLevel !== this.maxDropLevel) {
       this.minDropLevel = newMinLevel;
@@ -530,8 +529,11 @@ export default class MainScene extends Phaser.Scene {
           // 모든 과일의 sleep 상태 해제 (중력 재적용)
           const Sleeping = Phaser.Physics.Matter.Matter.Sleeping;
           this.fruits.forEach(fruit => {
-            if (fruit.body) {
+            // 제거될 과일은 제외하고 깨우기
+            if (!fruitsToRemove.includes(fruit) && fruit.body) {
               Sleeping.set(fruit.body, false);
+              fruit.body.isSleeping = false; // 강제로 깨우기
+              fruit.body.sleepCounter = 0; // 수면 카운터 초기화
             }
           });
           
@@ -617,7 +619,7 @@ export default class MainScene extends Phaser.Scene {
 
     // 스프라이트 기반 과일 생성
     const fruit = this.add.sprite(x, y, `fruit_${level}`);
-    fruit.setScale(radius / 200);
+    fruit.setScale(radius / 170);
     fruit.setOrigin(0.5, 0.5);
 
     // Matter.js 물리 적용 (원형 바디 사용, 반지름을 정확히 설정)
@@ -786,7 +788,7 @@ export default class MainScene extends Phaser.Scene {
       this.previewSprite.setPosition(mouseX, mouseY);
     }
     
-    this.previewSprite.setScale(radius / 200);
+    this.previewSprite.setScale(radius / 170);
     this.previewSprite.setAlpha(alpha);
     this.previewSprite.setRotation(0);
 
