@@ -10,8 +10,450 @@ export default class MainScene extends Phaser.Scene {
     // 이미지나 에셋 로드 시 사용
   }
 
+  createFruitTextures() {
+    const fruitDrawers = [
+      null, // 레벨 0
+      this.drawCherry.bind(this),
+      this.drawStrawberry.bind(this),
+      this.drawGrape.bind(this),
+      this.drawOrange.bind(this),
+      this.drawPersimmon.bind(this),
+      this.drawApple.bind(this),
+      this.drawPear.bind(this),
+      this.drawPeach.bind(this),
+      this.drawPineapple.bind(this),
+      this.drawMelon.bind(this),
+      this.drawWatermelon.bind(this)
+    ];
+
+    fruitDrawers.forEach((drawer, index) => {
+      if (drawer) {
+        const canvas = document.createElement('canvas');
+        canvas.width = 400;
+        canvas.height = 400;
+        drawer(canvas, 400);
+        
+        const texture = this.textures.createCanvas(`fruit_${index}`, canvas.width, canvas.height);
+        const ctx = texture.getContext();
+        ctx.drawImage(canvas, 0, 0);
+        texture.refresh();
+      }
+    });
+  }
+
+  drawCherry(canvas, size) {
+    const ctx = canvas.getContext('2d');
+    const radius = size / 2;
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    
+    // 몸통 (물리 엔진 크기에 맞게 꽉 채움, 테두리 클리핑 방지를 위해 약간 작게 그림)
+    const bodyRadius = radius - 2;
+    const gradient = ctx.createRadialGradient(radius * 0.8, radius * 0.8, 0, radius, radius, bodyRadius);
+    gradient.addColorStop(0, '#FF5E5E');
+    gradient.addColorStop(1, '#D60000');
+    ctx.fillStyle = gradient;
+    ctx.beginPath();
+    ctx.arc(radius, radius, bodyRadius, 0, Math.PI * 2);
+    ctx.fill();
+
+    // 테두리 추가 (클리핑 없이 꽉 채우기 위해 4px 선 사용: 198 + 2 = 200)
+    ctx.strokeStyle = '#D60000';
+    ctx.lineWidth = 4;
+    ctx.stroke();
+    
+    // 꼭지 부분 (부드러운 곡선)
+    ctx.strokeStyle = '#4A2B12';
+    ctx.lineWidth = size * 0.05;
+    ctx.lineCap = 'round';
+    ctx.beginPath();
+    ctx.moveTo(radius, radius * 0.3);
+    ctx.quadraticCurveTo(radius * 1.1, radius * 0.1, radius * 1.3, radius * 0.2);
+    ctx.stroke();
+
+    // 잎사귀 (아기자기한 포인트)
+    ctx.fillStyle = '#4CAF50';
+    ctx.beginPath();
+    ctx.ellipse(radius * 1.15, radius * 0.2, size * 0.1, size * 0.05, Math.PI / 4, 0, Math.PI * 2);
+    ctx.fill();
+    
+    // 광택 (반짝이는 느낌)
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.6)';
+    ctx.beginPath();
+    ctx.ellipse(radius * 0.7, radius * 0.7, size * 0.15, size * 0.1, -Math.PI / 4, 0, Math.PI * 2);
+    ctx.fill();
+    
+    // 작은 하이라이트
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
+    ctx.beginPath();
+    ctx.arc(radius * 0.6, radius * 0.6, size * 0.03, 0, Math.PI * 2);
+    ctx.fill();
+
+    // 귀여운 눈 (훨씬 더 크게)
+    ctx.fillStyle = '#4A2B12';
+    ctx.beginPath();
+    ctx.arc(radius * 0.75, radius * 0.95, size * 0.09, 0, Math.PI * 2); // 왼쪽 눈
+    ctx.arc(radius * 1.25, radius * 0.95, size * 0.09, 0, Math.PI * 2); // 오른쪽 눈
+    ctx.fill();
+
+    // 눈 하이라이트 (비례해서 키움)
+    ctx.fillStyle = 'white';
+    ctx.beginPath();
+    ctx.arc(radius * 0.7, radius * 0.9, size * 0.035, 0, Math.PI * 2);
+    ctx.arc(radius * 1.2, radius * 0.9, size * 0.035, 0, Math.PI * 2);
+    ctx.fill();
+
+    // 귀여운 입 (더 굵고 크게)
+    ctx.strokeStyle = '#4A2B12';
+    ctx.lineWidth = size * 0.04;
+    ctx.lineCap = 'round';
+    ctx.beginPath();
+    ctx.arc(radius, radius * 1.0, size * 0.15, 0.2 * Math.PI, 0.8 * Math.PI);
+    ctx.stroke();
+
+    // 볼터치 (더 크고 투명하게)
+    ctx.fillStyle = 'rgba(255, 105, 180, 0.6)';
+    ctx.beginPath();
+    ctx.ellipse(radius * 0.6, radius * 1.15, size * 0.12, size * 0.07, 0, 0, Math.PI * 2);
+    ctx.ellipse(radius * 1.4, radius * 1.15, size * 0.12, size * 0.07, 0, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  drawStrawberry(canvas, size) {
+    const ctx = canvas.getContext('2d');
+    const radius = size / 2;
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    
+    const gradient = ctx.createRadialGradient(radius * 0.8, radius * 1, 0, radius, radius, radius * 0.9);
+    gradient.addColorStop(0, '#FF6699');
+    gradient.addColorStop(1, '#CC0033');
+    ctx.fillStyle = gradient;
+    ctx.beginPath();
+    ctx.ellipse(radius, radius * 1.1, radius * 0.7, radius * 0.95, 0, 0, Math.PI * 2);
+    ctx.fill();
+    
+    ctx.fillStyle = '#FFD700';
+    const seeds = [[radius * 0.6, radius * 0.7], [radius, radius * 0.6], [radius * 1.4, radius * 0.7], [radius * 0.7, radius * 1.1], [radius * 1.3, radius * 1.1], [radius, radius * 1.4]];
+    seeds.forEach(([x, y]) => {
+      ctx.beginPath();
+      ctx.arc(x, y, radius * 0.08, 0, Math.PI * 2);
+      ctx.fill();
+    });
+    
+    ctx.fillStyle = '#228B22';
+    ctx.beginPath();
+    ctx.ellipse(radius * 0.7, radius * 0.3, radius * 0.15, radius * 0.3, -Math.PI / 6, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.ellipse(radius, radius * 0.2, radius * 0.15, radius * 0.3, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.ellipse(radius * 1.3, radius * 0.3, radius * 0.15, radius * 0.3, Math.PI / 6, 0, Math.PI * 2);
+    ctx.fill();
+    
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.6)';
+    ctx.beginPath();
+    ctx.ellipse(radius * 0.7, radius * 0.9, radius * 0.15, radius * 0.2, 0, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  drawGrape(canvas, size) {
+    const ctx = canvas.getContext('2d');
+    const radius = size / 2;
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    
+    ctx.strokeStyle = '#8B4513';
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.moveTo(radius, radius * 0.15);
+    ctx.lineTo(radius, radius * 0.45);
+    ctx.stroke();
+    
+    const grapes = [[radius, radius * 0.6, radius * 0.35], [radius * 0.55, radius * 0.95, radius * 0.3], [radius * 1.45, radius * 0.95, radius * 0.3], [radius * 0.7, radius * 1.4, radius * 0.25], [radius * 1.3, radius * 1.4, radius * 0.25]];
+    
+    grapes.forEach(([x, y, r]) => {
+      const gradientGrape = ctx.createRadialGradient(x - r * 0.3, y - r * 0.3, 0, x, y, r);
+      gradientGrape.addColorStop(0, '#BB33FF');
+      gradientGrape.addColorStop(1, '#660099');
+      ctx.fillStyle = gradientGrape;
+      ctx.beginPath();
+      ctx.arc(x, y, r, 0, Math.PI * 2);
+      ctx.fill();
+    });
+    
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
+    grapes.forEach(([x, y, r]) => {
+      ctx.beginPath();
+      ctx.arc(x - r * 0.4, y - r * 0.4, r * 0.3, 0, Math.PI * 2);
+      ctx.fill();
+    });
+  }
+
+  drawOrange(canvas, size) {
+    const ctx = canvas.getContext('2d');
+    const radius = size / 2;
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    
+    const gradient = ctx.createRadialGradient(radius * 0.7, radius * 0.7, 0, radius, radius, radius * 0.9);
+    gradient.addColorStop(0, '#FFB84D');
+    gradient.addColorStop(1, '#FF8C00');
+    ctx.fillStyle = gradient;
+    ctx.beginPath();
+    ctx.arc(radius, radius, radius * 0.9, 0, Math.PI * 2);
+    ctx.fill();
+    
+    ctx.strokeStyle = 'rgba(255, 140, 0, 0.5)';
+    ctx.lineWidth = 2;
+    for (let i = 0; i < 8; i++) {
+      const angle = (Math.PI * 2 * i) / 8;
+      ctx.beginPath();
+      ctx.moveTo(radius, radius);
+      ctx.lineTo(radius + Math.cos(angle) * radius * 0.9, radius + Math.sin(angle) * radius * 0.9);
+      ctx.stroke();
+    }
+    
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
+    ctx.beginPath();
+    ctx.arc(radius * 0.6, radius * 0.6, radius * 0.25, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  drawPersimmon(canvas, size) {
+    const ctx = canvas.getContext('2d');
+    const radius = size / 2;
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    
+    const gradient = ctx.createRadialGradient(radius * 0.8, radius * 0.8, 0, radius, radius, radius * 0.9);
+    gradient.addColorStop(0, '#FF9933');
+    gradient.addColorStop(1, '#CC6600');
+    ctx.fillStyle = gradient;
+    ctx.beginPath();
+    ctx.arc(radius, radius, radius * 0.9, 0, Math.PI * 2);
+    ctx.fill();
+    
+    ctx.fillStyle = '#228B22';
+    ctx.beginPath();
+    ctx.ellipse(radius, radius * 0.2, radius * 0.15, radius * 0.25, 0, 0, Math.PI * 2);
+    ctx.fill();
+    
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
+    ctx.beginPath();
+    ctx.arc(radius * 0.6, radius * 0.6, radius * 0.3, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  drawApple(canvas, size) {
+    const ctx = canvas.getContext('2d');
+    const radius = size / 2;
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    
+    const gradient = ctx.createRadialGradient(radius * 0.8, radius * 0.8, 0, radius, radius, radius * 0.9);
+    gradient.addColorStop(0, '#FF6666');
+    gradient.addColorStop(1, '#CC0000');
+    ctx.fillStyle = gradient;
+    ctx.beginPath();
+    ctx.arc(radius, radius, radius * 0.9, 0, Math.PI * 2);
+    ctx.fill();
+    
+    ctx.fillStyle = '#990000';
+    ctx.beginPath();
+    ctx.arc(radius, radius * 0.15, radius * 0.2, 0, Math.PI * 2);
+    ctx.fill();
+    
+    ctx.strokeStyle = '#8B4513';
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.moveTo(radius, radius * 0.15);
+    ctx.lineTo(radius, radius * 0.35);
+    ctx.stroke();
+    
+    ctx.fillStyle = '#228B22';
+    ctx.beginPath();
+    ctx.ellipse(radius * 1.2, radius * 0.3, radius * 0.2, radius * 0.3, Math.PI / 4, 0, Math.PI * 2);
+    ctx.fill();
+    
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.6)';
+    ctx.beginPath();
+    ctx.arc(radius * 0.6, radius * 0.6, radius * 0.3, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  drawPear(canvas, size) {
+    const ctx = canvas.getContext('2d');
+    const radius = size / 2;
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    
+    const gradient = ctx.createRadialGradient(radius * 0.8, radius * 1, 0, radius, radius, radius * 0.9);
+    gradient.addColorStop(0, '#D4E157');
+    gradient.addColorStop(1, '#9CCC65');
+    ctx.fillStyle = gradient;
+    ctx.beginPath();
+    ctx.ellipse(radius, radius * 1.1, radius * 0.7, radius * 0.95, 0, 0, Math.PI * 2);
+    ctx.fill();
+    
+    ctx.beginPath();
+    ctx.ellipse(radius, radius * 0.3, radius * 0.4, radius * 0.5, 0, 0, Math.PI * 2);
+    ctx.fill();
+    
+    ctx.fillStyle = '#8B4513';
+    ctx.beginPath();
+    ctx.arc(radius, radius * 0.1, radius * 0.1, 0, Math.PI * 2);
+    ctx.fill();
+    
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
+    ctx.beginPath();
+    ctx.arc(radius * 0.6, radius * 0.8, radius * 0.3, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  drawPeach(canvas, size) {
+    const ctx = canvas.getContext('2d');
+    const radius = size / 2;
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    
+    const gradient = ctx.createRadialGradient(radius * 0.8, radius * 0.8, 0, radius, radius, radius * 0.9);
+    gradient.addColorStop(0, '#FFB6C1');
+    gradient.addColorStop(1, '#FF69B4');
+    ctx.fillStyle = gradient;
+    ctx.beginPath();
+    ctx.arc(radius, radius, radius * 0.9, 0, Math.PI * 2);
+    ctx.fill();
+    
+    ctx.strokeStyle = 'rgba(255, 105, 180, 0.6)';
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.moveTo(radius, radius * 0.1);
+    ctx.quadraticCurveTo(radius * 0.7, radius, radius, radius * 1.9);
+    ctx.stroke();
+    
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.6)';
+    ctx.beginPath();
+    ctx.arc(radius * 0.6, radius * 0.6, radius * 0.3, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  drawPineapple(canvas, size) {
+    const ctx = canvas.getContext('2d');
+    const radius = size / 2;
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    
+    const gradient = ctx.createRadialGradient(radius * 0.8, radius * 0.8, 0, radius, radius, radius * 0.85);
+    gradient.addColorStop(0, '#FFE680');
+    gradient.addColorStop(1, '#FFD700');
+    ctx.fillStyle = gradient;
+    ctx.beginPath();
+    ctx.arc(radius, radius, radius * 0.85, 0, Math.PI * 2);
+    ctx.fill();
+    
+    ctx.strokeStyle = 'rgba(255, 215, 0, 0.6)';
+    ctx.lineWidth = 1.5;
+    for (let i = 0; i < 6; i++) {
+      for (let j = 0; j < 6; j++) {
+        const x = radius * 0.3 + (i * radius * 0.25);
+        const y = radius * 0.3 + (j * radius * 0.25);
+        ctx.strokeRect(x, y, radius * 0.2, radius * 0.2);
+      }
+    }
+    
+    ctx.fillStyle = '#228B22';
+    for (let i = 0; i < 5; i++) {
+      const angle = (Math.PI * 2 * i) / 5;
+      ctx.save();
+      ctx.translate(radius, radius * 0.1);
+      ctx.rotate(angle);
+      ctx.beginPath();
+      ctx.ellipse(0, -radius * 0.4, radius * 0.15, radius * 0.4, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    }
+    
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
+    ctx.beginPath();
+    ctx.arc(radius * 0.6, radius * 0.6, radius * 0.25, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  drawMelon(canvas, size) {
+    const ctx = canvas.getContext('2d');
+    const radius = size / 2;
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    
+    const gradient = ctx.createRadialGradient(radius * 0.8, radius * 0.8, 0, radius, radius, radius * 0.9);
+    gradient.addColorStop(0, '#90EE90');
+    gradient.addColorStop(1, '#32CD32');
+    ctx.fillStyle = gradient;
+    ctx.beginPath();
+    ctx.arc(radius, radius, radius * 0.9, 0, Math.PI * 2);
+    ctx.fill();
+    
+    ctx.strokeStyle = 'rgba(50, 205, 50, 0.6)';
+    ctx.lineWidth = 2;
+    for (let i = 0; i < 8; i++) {
+      const angle = (Math.PI * 2 * i) / 8;
+      ctx.beginPath();
+      ctx.moveTo(radius, radius);
+      ctx.lineTo(radius + Math.cos(angle) * radius * 0.9, radius + Math.sin(angle) * radius * 0.9);
+      ctx.stroke();
+    }
+    
+    for (let i = 1; i < 4; i++) {
+      ctx.beginPath();
+      const r = radius * (0.3 * i);
+      ctx.arc(radius, radius, r, 0, Math.PI * 2);
+      ctx.stroke();
+    }
+    
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
+    ctx.beginPath();
+    ctx.arc(radius * 0.6, radius * 0.6, radius * 0.3, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  drawWatermelon(canvas, size) {
+    const ctx = canvas.getContext('2d');
+    const radius = size / 2;
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    
+    const gradient = ctx.createRadialGradient(radius * 0.8, radius * 0.8, 0, radius, radius, radius * 0.9);
+    gradient.addColorStop(0, '#228B22');
+    gradient.addColorStop(1, '#006400');
+    ctx.fillStyle = gradient;
+    ctx.beginPath();
+    ctx.arc(radius, radius, radius * 0.9, 0, Math.PI * 2);
+    ctx.fill();
+    
+    ctx.strokeStyle = 'rgba(0, 100, 0, 0.8)';
+    ctx.lineWidth = 3;
+    for (let i = 0; i < 5; i++) {
+      ctx.beginPath();
+      ctx.moveTo(radius * 0.2, radius * (0.2 + i * 0.15));
+      ctx.quadraticCurveTo(radius, radius * (0.2 + i * 0.15), radius * 1.8, radius * (0.2 + i * 0.15));
+      ctx.stroke();
+    }
+    
+    ctx.fillStyle = '#FF0000';
+    ctx.beginPath();
+    ctx.arc(radius, radius, radius * 0.6, 0, Math.PI * 2);
+    ctx.fill();
+    
+    ctx.fillStyle = '#000000';
+    const seeds = [[radius * 0.7, radius * 0.7], [radius * 1.3, radius * 0.7], [radius, radius * 1.1], [radius * 0.8, radius * 0.9], [radius * 1.2, radius * 0.9]];
+    seeds.forEach(([x, y]) => {
+      ctx.beginPath();
+      ctx.ellipse(x, y, radius * 0.08, radius * 0.12, Math.PI / 4, 0, Math.PI * 2);
+      ctx.fill();
+    });
+    
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.4)';
+    ctx.beginPath();
+    ctx.arc(radius * 0.6, radius * 0.6, radius * 0.25, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
   create() {
     const { width, height } = this.scale;
+
+    // 과일 텍스처 생성
+    this.createFruitTextures();
 
     // 1. 밝고 화사한 파스텔톤 배경
     const background = this.add.graphics();
@@ -93,13 +535,16 @@ export default class MainScene extends Phaser.Scene {
     // 3. 미리보기 과일 생성
     this.previewGraphics = this.add.graphics();
     this.previewText = this.add.text(0, 0, '', {
-      fontSize: '32px',
+      fontSize: '30px',
       color: '#ffffff',
       fontFamily: 'Arial',
       fontWeight: 'bold',
-      align: 'center'
+      align: 'center',
+      stroke: '#333333',
+      strokeThickness: 3
     });
     this.previewText.setOrigin(0.5, 0.5);
+    this.previewText.setDepth(15);
 
     this.gameOverTimer = 0;
     this.isGameOver = false;
@@ -149,54 +594,35 @@ export default class MainScene extends Phaser.Scene {
     const dropX = this.previewX;
     const dropY = this.previewY;
 
-    // 8각형 과일 생성 (graphics 사용)
-    const fruitGraphics = this.add.graphics();
-    fruitGraphics.fillStyle(fruitConfig.color, 1);
-    const octagonPoints = this.getOctagonPoints(radius);
-    fruitGraphics.beginPath();
-    fruitGraphics.moveTo(dropX + octagonPoints[0].x, dropY + octagonPoints[0].y);
-    for (let i = 1; i < octagonPoints.length; i++) {
-      fruitGraphics.lineTo(dropX + octagonPoints[i].x, dropY + octagonPoints[i].y);
-    }
-    fruitGraphics.closePath();
-    fruitGraphics.fillPath();
-
-    // 8각형 테두리
-    fruitGraphics.lineStyle(2, 0x000000, 0.3);
-    fruitGraphics.beginPath();
-    fruitGraphics.moveTo(dropX + octagonPoints[0].x, dropY + octagonPoints[0].y);
-    for (let i = 1; i < octagonPoints.length; i++) {
-      fruitGraphics.lineTo(dropX + octagonPoints[i].x, dropY + octagonPoints[i].y);
-    }
-    fruitGraphics.closePath();
-    fruitGraphics.strokePath();
-
-    // 물리 적용을 위한 8각형 바디 생성
-    const fruit = this.add.polygon(dropX, dropY, octagonPoints, 0x000000, 0);
+    // 스프라이트 기반 과일 생성
+    const fruit = this.add.sprite(dropX, dropY, `fruit_${dropLevel}`);
+    fruit.setScale(radius / 200); // 텍스처 크기(400)의 절반인 200을 기준으로 스케일 조정
     fruit.setOrigin(0.5, 0.5);
 
-    // Matter.js 물리 적용 (정확한 8각형 정점 사용)
-    const Vertices = Phaser.Physics.Matter.Matter.Vertices;
+    // Matter.js 물리 적용 (원형 바디 사용, 반지름을 정확히 설정)
     const Body = Phaser.Physics.Matter.Matter.Body;
-    
-    // 정점을 절대 좌표로 변환
-    const absolutePoints = octagonPoints.map(p => ({ x: dropX + p.x, y: dropY + p.y }));
-    
-    // 커스텀 바디 생성
-    const customBody = Body.create({
-      vertices: absolutePoints,
-      friction: 0.5,
-      restitution: 0.2
-    });
+    const Bodies = Phaser.Physics.Matter.Matter.Bodies;
     
     this.matter.add.gameObject(fruit, {
       label: `fruit_${dropLevel}`,
-      fruitLevel: dropLevel
+      fruitLevel: dropLevel,
+      shape: 'circle',
+      circleRadius: radius
     });
     
-    // 바디 교체
-    fruit.setExistingBody(customBody);
-
+    // 바디의 반지름을 정확히 설정
+    if (fruit.body) {
+      fruit.body.circleRadius = radius;
+      // 바디 재설정 (slop을 0으로 설정하여 물리 엔진과의 유격을 최소화)
+      const newBody = Bodies.circle(dropX, dropY, radius, {
+        friction: 0.5,
+        restitution: 0.2,
+        density: 0.001,
+        slop: 0
+      });
+      fruit.setExistingBody(newBody);
+    }
+    
     // 초기 속도 설정 (느리게 시작)
     Body.setVelocity(fruit.body, { x: 0, y: 0.5 });
     
@@ -207,26 +633,41 @@ export default class MainScene extends Phaser.Scene {
     fruit.radius = radius;
     fruit.level = dropLevel;
     fruit.fruitNumber = dropNumber;
-    fruit.fruitGraphics = fruitGraphics;
-    fruit.initialX = dropX; // 생성 시점의 x 좌표 저장
-    fruit.initialY = dropY; // 생성 시점의 y 좌표 저장
+    fruit.initialX = dropX;
+    fruit.initialY = dropY;
     this.fruits.push(fruit);
 
-    // 과일 숫자 텍스트 추가 (미리보기와 동일한 위치에서 시작)
+    // 과일 숫자 텍스트 추가
     const fruitText = this.add.text(dropX, dropY, dropNumber, {
-      fontSize: '32px',
+      fontSize: '30px',
       color: '#ffffff',
       fontFamily: 'Arial',
       fontWeight: 'bold',
-      align: 'center'
+      align: 'center',
+      stroke: '#333333',
+      strokeThickness: 3
     });
     fruitText.setOrigin(0.5, 0.5);
     fruitText.setDepth(10);
     fruit.fruitText = fruitText;
 
+    // 미리보기 과일 숨기기
+    if (this.previewSprite) {
+      this.previewSprite.setVisible(false);
+    }
+    this.previewText.setVisible(false);
+
     // 새로운 미리보기 과일 생성 (범위에서 랜덤하게 선택)
     this.previewLevel = Phaser.Math.Between(this.minDropLevel, this.maxDropLevel);
     this.previewNumber = this.getRandomNumberForLevel(this.previewLevel);
+
+    // 0.5초 후에 미리보기 과일 다시 표시
+    this.time.delayedCall(500, () => {
+      if (this.previewSprite) {
+        this.previewSprite.setVisible(true);
+      }
+      this.previewText.setVisible(true);
+    });
   }
 
   getRandomNumberForLevel(level) {
@@ -324,14 +765,8 @@ export default class MainScene extends Phaser.Scene {
       this.previewText.setText('');
     }
 
-    // 떨어진 과일의 그래픽과 텍스트 위치 동기화
+    // 떨어진 과일의 텍스트 위치 동기화
     this.fruits.forEach(fruit => {
-      if (fruit.fruitGraphics) {
-        // graphics 위치 업데이트 (생성 시점의 좌표 기준으로 물리 위치 반영)
-        const deltaX = fruit.x - fruit.initialX;
-        const deltaY = fruit.y - fruit.initialY;
-        fruit.fruitGraphics.setPosition(deltaX, deltaY);
-      }
       if (fruit.fruitText) {
         // 텍스트 위치 업데이트
         fruit.fruitText.setPosition(fruit.x, fruit.y);
@@ -596,53 +1031,35 @@ export default class MainScene extends Phaser.Scene {
     const radius = fruitConfig.radius;
     const newNumber = this.getRandomNumberForLevel(level);
 
-    // 8각형 과일 생성 (graphics 사용)
-    const fruitGraphics = this.add.graphics();
-    fruitGraphics.fillStyle(fruitConfig.color, 1);
-    const octagonPoints = this.getOctagonPoints(radius);
-    fruitGraphics.beginPath();
-    fruitGraphics.moveTo(x + octagonPoints[0].x, y + octagonPoints[0].y);
-    for (let i = 1; i < octagonPoints.length; i++) {
-      fruitGraphics.lineTo(x + octagonPoints[i].x, y + octagonPoints[i].y);
-    }
-    fruitGraphics.closePath();
-    fruitGraphics.fillPath();
-
-    // 8각형 테두리
-    fruitGraphics.lineStyle(2, 0x000000, 0.3);
-    fruitGraphics.beginPath();
-    fruitGraphics.moveTo(x + octagonPoints[0].x, y + octagonPoints[0].y);
-    for (let i = 1; i < octagonPoints.length; i++) {
-      fruitGraphics.lineTo(x + octagonPoints[i].x, y + octagonPoints[i].y);
-    }
-    fruitGraphics.closePath();
-    fruitGraphics.strokePath();
-
-    // 물리 적용을 위한 8각형 바디 생성
-    const fruit = this.add.polygon(x, y, octagonPoints, 0x000000, 0);
+    // 스프라이트 기반 과일 생성
+    const fruit = this.add.sprite(x, y, `fruit_${level}`);
+    fruit.setScale(radius / 200);
     fruit.setOrigin(0.5, 0.5);
 
-    // Matter.js 물리 적용 (정확한 8각형 정점 사용)
+    // Matter.js 물리 적용 (원형 바디 사용, 반지름을 정확히 설정)
     const Body = Phaser.Physics.Matter.Matter.Body;
+    const Bodies = Phaser.Physics.Matter.Matter.Bodies;
     const Sleeping = Phaser.Physics.Matter.Matter.Sleeping;
-    
-    // 정점을 절대 좌표로 변환
-    const absolutePoints = octagonPoints.map(p => ({ x: x + p.x, y: y + p.y }));
-    
-    // 커스텀 바디 생성
-    const customBody = Body.create({
-      vertices: absolutePoints,
-      friction: 0.5,
-      restitution: 0.2
-    });
     
     this.matter.add.gameObject(fruit, {
       label: `fruit_${level}`,
-      fruitLevel: level
+      fruitLevel: level,
+      shape: 'circle',
+      circleRadius: radius
     });
     
-    // 바디 교체
-    fruit.setExistingBody(customBody);
+    // 바디의 반지름을 정확히 설정
+    if (fruit.body) {
+      fruit.body.circleRadius = radius;
+      // 바디 재설정 (slop을 0으로 설정하여 물리 엔진과의 유격을 최소화)
+      const newBody = Bodies.circle(x, y, radius, {
+        friction: 0.5,
+        restitution: 0.2,
+        density: 0.001,
+        slop: 0
+      });
+      fruit.setExistingBody(newBody);
+    }
     
     // 중력 적용을 위해 sleeping 상태 해제
     Sleeping.set(fruit.body, false);
@@ -651,18 +1068,19 @@ export default class MainScene extends Phaser.Scene {
     fruit.radius = radius;
     fruit.level = level;
     fruit.fruitNumber = newNumber;
-    fruit.fruitGraphics = fruitGraphics;
     fruit.initialX = x;
     fruit.initialY = y;
     this.fruits.push(fruit);
 
     // 과일 숫자 텍스트 추가
     const fruitText = this.add.text(x, y, newNumber, {
-      fontSize: '32px',
+      fontSize: '30px',
       color: '#ffffff',
       fontFamily: 'Arial',
       fontWeight: 'bold',
-      align: 'center'
+      align: 'center',
+      stroke: '#333333',
+      strokeThickness: 3
     });
     fruitText.setOrigin(0.5, 0.5);
     fruitText.setDepth(10);
@@ -766,35 +1184,34 @@ export default class MainScene extends Phaser.Scene {
     // 미리보기 그래픽 초기화
     this.previewGraphics.clear();
 
-    // 게임오버 경고 중이면 흑백 처리, 아니면 원래 색상
-    let fillColor = fruitConfig.color;
+    // 게임오버 경고 중이면 투명도 처리
+    let alpha = 1;
     if (this.gameOverWarning) {
-      fillColor = 0x888888; // 흑백 처리
+      alpha = 0.5; // 투명도 처리
     }
 
-    // 8각형 그리기
-    this.previewGraphics.fillStyle(fillColor, 1);
-    const octagonPoints = this.getOctagonPoints(radius);
-    this.previewGraphics.beginPath();
-    this.previewGraphics.moveTo(mouseX + octagonPoints[0].x, mouseY + octagonPoints[0].y);
-    for (let i = 1; i < octagonPoints.length; i++) {
-      this.previewGraphics.lineTo(mouseX + octagonPoints[i].x, mouseY + octagonPoints[i].y);
+    // 스프라이트 기반 미리보기 (텍스처 사용)
+    if (!this.previewSprite) {
+      this.previewSprite = this.add.sprite(mouseX, mouseY, `fruit_${this.previewLevel}`);
+      this.previewSprite.setOrigin(0.5, 0.5);
+      this.previewSprite.setDepth(5);
+      this.previewSpriteRotation = 0;
+    } else {
+      // 기존 스프라이트 업데이트
+      this.previewSprite.setTexture(`fruit_${this.previewLevel}`);
+      this.previewSprite.setPosition(mouseX, mouseY);
     }
-    this.previewGraphics.closePath();
-    this.previewGraphics.fillPath();
-
-    // 8각형 테두리
-    this.previewGraphics.lineStyle(2, 0x000000, 0.3);
-    this.previewGraphics.beginPath();
-    this.previewGraphics.moveTo(mouseX + octagonPoints[0].x, mouseY + octagonPoints[0].y);
-    for (let i = 1; i < octagonPoints.length; i++) {
-      this.previewGraphics.lineTo(mouseX + octagonPoints[i].x, mouseY + octagonPoints[i].y);
-    }
-    this.previewGraphics.closePath();
-    this.previewGraphics.strokePath();
+    
+    this.previewSprite.setScale(radius / 200);
+    this.previewSprite.setAlpha(alpha);
+    
+    // 회전 애니메이션 (천천히 회전)
+    this.previewSpriteRotation = (this.previewSpriteRotation + 0.02) % (Math.PI * 2);
+    this.previewSprite.setRotation(this.previewSpriteRotation);
 
     // 숫자 텍스트 업데이트
     this.previewText.setText(this.previewNumber);
     this.previewText.setPosition(mouseX, mouseY);
+    this.previewText.setAlpha(alpha);
   }
 }
