@@ -13,7 +13,8 @@ export function createFruitTextures(scene) {
     drawPeach,
     drawPineapple,
     drawMelon,
-    drawWatermelon
+    drawWatermelon,
+    drawBomb
   ];
 
   fruitDrawers.forEach((drawer, index) => {
@@ -944,3 +945,153 @@ function drawWatermelon(canvas, size) {
 
   drawFruitFace(ctx, radius, radius, radius * 0.7);
 }
+
+function drawBomb(canvas, size) {
+  const ctx = canvas.getContext('2d');
+  const radius = size / 2;
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  
+  // 1. 스케일 및 위치 조정
+  ctx.translate(radius, radius);
+  ctx.scale(0.75, 0.75);
+  ctx.translate(-radius, -radius);
+  
+  // 2. 몸통 (수류탄 + 파인애플 느낌)
+  const gradient = ctx.createRadialGradient(radius * 0.4, radius * 0.4, 0, radius, radius, radius);
+  gradient.addColorStop(0, '#6B8E23'); // Olive Drab (밝은 국방색)
+  gradient.addColorStop(0.5, '#556B2F'); // Dark Olive Green
+  gradient.addColorStop(1, '#2F3518'); // 아주 어두운 국방색
+  
+  ctx.fillStyle = gradient;
+  ctx.beginPath();
+  ctx.arc(radius, radius, radius * 0.95, 0, Math.PI * 2);
+  ctx.fill();
+  
+  // 3. 격자 무늬 (수류탄 파편/파인애플 껍질)
+  ctx.strokeStyle = 'rgba(0, 0, 0, 0.4)';
+  ctx.lineWidth = 6;
+  ctx.lineCap = 'round';
+  
+  // 가로선
+  for (let i = 1; i < 6; i++) {
+    const y = radius * 0.4 + (radius * 1.2 * i) / 6;
+    ctx.beginPath();
+    ctx.ellipse(radius, y, radius * 0.9, radius * 0.2, 0, 0, Math.PI * 2);
+    ctx.stroke();
+  }
+  
+  // 사선 (격자)
+  ctx.save();
+  ctx.beginPath();
+  ctx.arc(radius, radius, radius * 0.95, 0, Math.PI * 2);
+  ctx.clip();
+  
+  for (let i = -3; i < 4; i++) {
+    ctx.beginPath();
+    ctx.moveTo(radius + i * 40 - 100, 0);
+    ctx.lineTo(radius + i * 40 + 100, size);
+    ctx.stroke();
+    
+    ctx.beginPath();
+    ctx.moveTo(radius + i * 40 + 100, 0);
+    ctx.lineTo(radius + i * 40 - 100, size);
+    ctx.stroke();
+  }
+  ctx.restore();
+
+  // 4. T자형 과일 꼭지 (멜론 스타일 + 국방색 테마) - 크기 및 두께 대폭 확대
+  const stemY = radius - radius * 0.95;
+  
+  ctx.strokeStyle = '#556B2F'; // DarkOliveGreen
+  ctx.fillStyle = '#6B8E23'; // OliveDrab
+  ctx.lineWidth = 14; // 두께 증가 (8 -> 14)
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+
+  // T자 세로 기둥
+  ctx.beginPath();
+  ctx.moveTo(radius, stemY);
+  ctx.lineTo(radius, stemY - 55); // 길이 증가 (35 -> 55)
+  ctx.stroke();
+  
+  // T자 가로 기둥
+  ctx.beginPath();
+  ctx.moveTo(radius - 45, stemY - 55); // 폭 증가 (25 -> 45)
+  ctx.lineTo(radius + 45, stemY - 55);
+  ctx.stroke();
+
+  // 꼭지 연결부 (더 크게)
+  ctx.beginPath();
+  ctx.arc(radius, stemY, 16, 0, Math.PI * 2); // 크기 증가 (12 -> 16)
+  ctx.fill();
+
+  // 꼭지 하이라이트 (입체감 추가)
+  ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
+  ctx.lineWidth = 4;
+  ctx.beginPath();
+  ctx.moveTo(radius - 35, stemY - 58);
+  ctx.lineTo(radius + 35, stemY - 58);
+  ctx.stroke();
+  
+  // 5. 디지털 전광판 (중앙) - 세로 높이 확대
+  const displayW = radius * 0.85;
+  const displayH = radius * 0.85; // 높이 대폭 확대 (0.6 -> 0.85)
+  const displayX = radius - displayW / 2;
+  const displayY = radius - displayH / 2;
+
+  // 전광판 하우징 (금속 케이스)
+  ctx.fillStyle = '#444'; // 진한 회색 금속
+  ctx.beginPath();
+  ctx.roundRect(displayX - 6, displayY - 6, displayW + 12, displayH + 12, 10);
+  ctx.fill();
+  
+  // 하우징 테두리 (입체감)
+  ctx.strokeStyle = '#222';
+  ctx.lineWidth = 1;
+  ctx.stroke();
+  
+  // 볼트 (하우징 고정용)
+  ctx.fillStyle = '#AAA';
+  const boltInset = 2;
+  ctx.beginPath();
+  ctx.arc(displayX - boltInset, displayY - boltInset, 3, 0, Math.PI * 2);
+  ctx.arc(displayX + displayW + boltInset, displayY - boltInset, 3, 0, Math.PI * 2);
+  ctx.arc(displayX - boltInset, displayY + displayH + boltInset, 3, 0, Math.PI * 2);
+  ctx.arc(displayX + displayW + boltInset, displayY + displayH + boltInset, 3, 0, Math.PI * 2);
+  ctx.fill();
+
+  // 전광판 화면 (검은색)
+  ctx.fillStyle = '#000000';
+  ctx.beginPath();
+  ctx.roundRect(displayX, displayY, displayW, displayH, 6);
+  ctx.fill();
+  
+  // 화면 내부 격자 (LED 도트 매트릭스 느낌)
+  ctx.fillStyle = 'rgba(30, 30, 30, 1)';
+  const gridSize = 5;
+  for(let dy = 0; dy < displayH; dy += gridSize) {
+    for(let dx = 0; dx < displayW; dx += gridSize) {
+      ctx.fillRect(displayX + dx, displayY + dy, gridSize - 1, gridSize - 1);
+    }
+  }
+
+  // 화면 글래스 광택 (유리 질감)
+  const gloss = ctx.createLinearGradient(displayX, displayY, displayX + displayW, displayY + displayH);
+  gloss.addColorStop(0, 'rgba(255, 255, 255, 0.15)');
+  gloss.addColorStop(0.4, 'rgba(255, 255, 255, 0)');
+  gloss.addColorStop(1, 'rgba(255, 255, 255, 0.05)');
+  
+  ctx.fillStyle = gloss;
+  ctx.beginPath();
+  ctx.roundRect(displayX, displayY, displayW, displayH, 6);
+  ctx.fill();
+
+  // 전광판 프레임 하이라이트
+  ctx.strokeStyle = '#FFFFFF';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.roundRect(displayX - 8, displayY - 8, displayW + 16, displayH + 16, 12);
+  ctx.stroke();
+}
+
+// ...
