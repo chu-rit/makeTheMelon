@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import fruitConfigs from './fruitConfigs';
+import { createFruitTextures } from './drawFruits';
 
 export default class MainScene extends Phaser.Scene {
   constructor() {
@@ -11,442 +12,7 @@ export default class MainScene extends Phaser.Scene {
   }
 
   createFruitTextures() {
-    const fruitDrawers = [
-      null, // 레벨 0
-      this.drawCherry.bind(this),
-      this.drawStrawberry.bind(this),
-      this.drawGrape.bind(this),
-      this.drawOrange.bind(this),
-      this.drawPersimmon.bind(this),
-      this.drawApple.bind(this),
-      this.drawPear.bind(this),
-      this.drawPeach.bind(this),
-      this.drawPineapple.bind(this),
-      this.drawMelon.bind(this),
-      this.drawWatermelon.bind(this)
-    ];
-
-    fruitDrawers.forEach((drawer, index) => {
-      if (drawer) {
-        const canvas = document.createElement('canvas');
-        canvas.width = 400;
-        canvas.height = 400;
-        drawer(canvas, 400);
-        
-        const texture = this.textures.createCanvas(`fruit_${index}`, canvas.width, canvas.height);
-        const ctx = texture.getContext();
-        ctx.drawImage(canvas, 0, 0);
-        texture.refresh();
-      }
-    });
-  }
-
-  drawCherry(canvas, size) {
-    const ctx = canvas.getContext('2d');
-    const radius = size / 2;
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    
-    // 몸통 (물리 엔진 크기에 맞게 꽉 채움, 테두리 클리핑 방지를 위해 약간 작게 그림)
-    const bodyRadius = radius - 2;
-    const gradient = ctx.createRadialGradient(radius * 0.8, radius * 0.8, 0, radius, radius, bodyRadius);
-    gradient.addColorStop(0, '#FF5E5E');
-    gradient.addColorStop(1, '#D60000');
-    ctx.fillStyle = gradient;
-    ctx.beginPath();
-    ctx.arc(radius, radius, bodyRadius, 0, Math.PI * 2);
-    ctx.fill();
-
-    // 테두리 추가 (클리핑 없이 꽉 채우기 위해 4px 선 사용: 198 + 2 = 200)
-    ctx.strokeStyle = '#D60000';
-    ctx.lineWidth = 4;
-    ctx.stroke();
-    
-    // 꼭지 부분 (부드러운 곡선)
-    ctx.strokeStyle = '#4A2B12';
-    ctx.lineWidth = size * 0.05;
-    ctx.lineCap = 'round';
-    ctx.beginPath();
-    ctx.moveTo(radius, radius * 0.3);
-    ctx.quadraticCurveTo(radius * 1.1, radius * 0.1, radius * 1.3, radius * 0.2);
-    ctx.stroke();
-
-    // 잎사귀 (아기자기한 포인트)
-    ctx.fillStyle = '#4CAF50';
-    ctx.beginPath();
-    ctx.ellipse(radius * 1.15, radius * 0.2, size * 0.1, size * 0.05, Math.PI / 4, 0, Math.PI * 2);
-    ctx.fill();
-    
-    // 광택 (반짝이는 느낌)
-    ctx.fillStyle = 'rgba(255, 255, 255, 0.6)';
-    ctx.beginPath();
-    ctx.ellipse(radius * 0.7, radius * 0.7, size * 0.15, size * 0.1, -Math.PI / 4, 0, Math.PI * 2);
-    ctx.fill();
-    
-    // 작은 하이라이트
-    ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
-    ctx.beginPath();
-    ctx.arc(radius * 0.6, radius * 0.6, size * 0.03, 0, Math.PI * 2);
-    ctx.fill();
-
-    // 귀여운 눈 (훨씬 더 크게)
-    ctx.fillStyle = '#4A2B12';
-    ctx.beginPath();
-    ctx.arc(radius * 0.75, radius * 0.95, size * 0.09, 0, Math.PI * 2); // 왼쪽 눈
-    ctx.arc(radius * 1.25, radius * 0.95, size * 0.09, 0, Math.PI * 2); // 오른쪽 눈
-    ctx.fill();
-
-    // 눈 하이라이트 (비례해서 키움)
-    ctx.fillStyle = 'white';
-    ctx.beginPath();
-    ctx.arc(radius * 0.7, radius * 0.9, size * 0.035, 0, Math.PI * 2);
-    ctx.arc(radius * 1.2, radius * 0.9, size * 0.035, 0, Math.PI * 2);
-    ctx.fill();
-
-    // 귀여운 입 (더 굵고 크게)
-    ctx.strokeStyle = '#4A2B12';
-    ctx.lineWidth = size * 0.04;
-    ctx.lineCap = 'round';
-    ctx.beginPath();
-    ctx.arc(radius, radius * 1.0, size * 0.15, 0.2 * Math.PI, 0.8 * Math.PI);
-    ctx.stroke();
-
-    // 볼터치 (더 크고 투명하게)
-    ctx.fillStyle = 'rgba(255, 105, 180, 0.6)';
-    ctx.beginPath();
-    ctx.ellipse(radius * 0.6, radius * 1.15, size * 0.12, size * 0.07, 0, 0, Math.PI * 2);
-    ctx.ellipse(radius * 1.4, radius * 1.15, size * 0.12, size * 0.07, 0, 0, Math.PI * 2);
-    ctx.fill();
-  }
-
-  drawStrawberry(canvas, size) {
-    const ctx = canvas.getContext('2d');
-    const radius = size / 2;
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    
-    const gradient = ctx.createRadialGradient(radius * 0.8, radius * 1, 0, radius, radius, radius * 0.9);
-    gradient.addColorStop(0, '#FF6699');
-    gradient.addColorStop(1, '#CC0033');
-    ctx.fillStyle = gradient;
-    ctx.beginPath();
-    ctx.ellipse(radius, radius * 1.1, radius * 0.7, radius * 0.95, 0, 0, Math.PI * 2);
-    ctx.fill();
-    
-    ctx.fillStyle = '#FFD700';
-    const seeds = [[radius * 0.6, radius * 0.7], [radius, radius * 0.6], [radius * 1.4, radius * 0.7], [radius * 0.7, radius * 1.1], [radius * 1.3, radius * 1.1], [radius, radius * 1.4]];
-    seeds.forEach(([x, y]) => {
-      ctx.beginPath();
-      ctx.arc(x, y, radius * 0.08, 0, Math.PI * 2);
-      ctx.fill();
-    });
-    
-    ctx.fillStyle = '#228B22';
-    ctx.beginPath();
-    ctx.ellipse(radius * 0.7, radius * 0.3, radius * 0.15, radius * 0.3, -Math.PI / 6, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.beginPath();
-    ctx.ellipse(radius, radius * 0.2, radius * 0.15, radius * 0.3, 0, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.beginPath();
-    ctx.ellipse(radius * 1.3, radius * 0.3, radius * 0.15, radius * 0.3, Math.PI / 6, 0, Math.PI * 2);
-    ctx.fill();
-    
-    ctx.fillStyle = 'rgba(255, 255, 255, 0.6)';
-    ctx.beginPath();
-    ctx.ellipse(radius * 0.7, radius * 0.9, radius * 0.15, radius * 0.2, 0, 0, Math.PI * 2);
-    ctx.fill();
-  }
-
-  drawGrape(canvas, size) {
-    const ctx = canvas.getContext('2d');
-    const radius = size / 2;
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    
-    ctx.strokeStyle = '#8B4513';
-    ctx.lineWidth = 3;
-    ctx.beginPath();
-    ctx.moveTo(radius, radius * 0.15);
-    ctx.lineTo(radius, radius * 0.45);
-    ctx.stroke();
-    
-    const grapes = [[radius, radius * 0.6, radius * 0.35], [radius * 0.55, radius * 0.95, radius * 0.3], [radius * 1.45, radius * 0.95, radius * 0.3], [radius * 0.7, radius * 1.4, radius * 0.25], [radius * 1.3, radius * 1.4, radius * 0.25]];
-    
-    grapes.forEach(([x, y, r]) => {
-      const gradientGrape = ctx.createRadialGradient(x - r * 0.3, y - r * 0.3, 0, x, y, r);
-      gradientGrape.addColorStop(0, '#BB33FF');
-      gradientGrape.addColorStop(1, '#660099');
-      ctx.fillStyle = gradientGrape;
-      ctx.beginPath();
-      ctx.arc(x, y, r, 0, Math.PI * 2);
-      ctx.fill();
-    });
-    
-    ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
-    grapes.forEach(([x, y, r]) => {
-      ctx.beginPath();
-      ctx.arc(x - r * 0.4, y - r * 0.4, r * 0.3, 0, Math.PI * 2);
-      ctx.fill();
-    });
-  }
-
-  drawOrange(canvas, size) {
-    const ctx = canvas.getContext('2d');
-    const radius = size / 2;
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    
-    const gradient = ctx.createRadialGradient(radius * 0.7, radius * 0.7, 0, radius, radius, radius * 0.9);
-    gradient.addColorStop(0, '#FFB84D');
-    gradient.addColorStop(1, '#FF8C00');
-    ctx.fillStyle = gradient;
-    ctx.beginPath();
-    ctx.arc(radius, radius, radius * 0.9, 0, Math.PI * 2);
-    ctx.fill();
-    
-    ctx.strokeStyle = 'rgba(255, 140, 0, 0.5)';
-    ctx.lineWidth = 2;
-    for (let i = 0; i < 8; i++) {
-      const angle = (Math.PI * 2 * i) / 8;
-      ctx.beginPath();
-      ctx.moveTo(radius, radius);
-      ctx.lineTo(radius + Math.cos(angle) * radius * 0.9, radius + Math.sin(angle) * radius * 0.9);
-      ctx.stroke();
-    }
-    
-    ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
-    ctx.beginPath();
-    ctx.arc(radius * 0.6, radius * 0.6, radius * 0.25, 0, Math.PI * 2);
-    ctx.fill();
-  }
-
-  drawPersimmon(canvas, size) {
-    const ctx = canvas.getContext('2d');
-    const radius = size / 2;
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    
-    const gradient = ctx.createRadialGradient(radius * 0.8, radius * 0.8, 0, radius, radius, radius * 0.9);
-    gradient.addColorStop(0, '#FF9933');
-    gradient.addColorStop(1, '#CC6600');
-    ctx.fillStyle = gradient;
-    ctx.beginPath();
-    ctx.arc(radius, radius, radius * 0.9, 0, Math.PI * 2);
-    ctx.fill();
-    
-    ctx.fillStyle = '#228B22';
-    ctx.beginPath();
-    ctx.ellipse(radius, radius * 0.2, radius * 0.15, radius * 0.25, 0, 0, Math.PI * 2);
-    ctx.fill();
-    
-    ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
-    ctx.beginPath();
-    ctx.arc(radius * 0.6, radius * 0.6, radius * 0.3, 0, Math.PI * 2);
-    ctx.fill();
-  }
-
-  drawApple(canvas, size) {
-    const ctx = canvas.getContext('2d');
-    const radius = size / 2;
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    
-    const gradient = ctx.createRadialGradient(radius * 0.8, radius * 0.8, 0, radius, radius, radius * 0.9);
-    gradient.addColorStop(0, '#FF6666');
-    gradient.addColorStop(1, '#CC0000');
-    ctx.fillStyle = gradient;
-    ctx.beginPath();
-    ctx.arc(radius, radius, radius * 0.9, 0, Math.PI * 2);
-    ctx.fill();
-    
-    ctx.fillStyle = '#990000';
-    ctx.beginPath();
-    ctx.arc(radius, radius * 0.15, radius * 0.2, 0, Math.PI * 2);
-    ctx.fill();
-    
-    ctx.strokeStyle = '#8B4513';
-    ctx.lineWidth = 3;
-    ctx.beginPath();
-    ctx.moveTo(radius, radius * 0.15);
-    ctx.lineTo(radius, radius * 0.35);
-    ctx.stroke();
-    
-    ctx.fillStyle = '#228B22';
-    ctx.beginPath();
-    ctx.ellipse(radius * 1.2, radius * 0.3, radius * 0.2, radius * 0.3, Math.PI / 4, 0, Math.PI * 2);
-    ctx.fill();
-    
-    ctx.fillStyle = 'rgba(255, 255, 255, 0.6)';
-    ctx.beginPath();
-    ctx.arc(radius * 0.6, radius * 0.6, radius * 0.3, 0, Math.PI * 2);
-    ctx.fill();
-  }
-
-  drawPear(canvas, size) {
-    const ctx = canvas.getContext('2d');
-    const radius = size / 2;
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    
-    const gradient = ctx.createRadialGradient(radius * 0.8, radius * 1, 0, radius, radius, radius * 0.9);
-    gradient.addColorStop(0, '#D4E157');
-    gradient.addColorStop(1, '#9CCC65');
-    ctx.fillStyle = gradient;
-    ctx.beginPath();
-    ctx.ellipse(radius, radius * 1.1, radius * 0.7, radius * 0.95, 0, 0, Math.PI * 2);
-    ctx.fill();
-    
-    ctx.beginPath();
-    ctx.ellipse(radius, radius * 0.3, radius * 0.4, radius * 0.5, 0, 0, Math.PI * 2);
-    ctx.fill();
-    
-    ctx.fillStyle = '#8B4513';
-    ctx.beginPath();
-    ctx.arc(radius, radius * 0.1, radius * 0.1, 0, Math.PI * 2);
-    ctx.fill();
-    
-    ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
-    ctx.beginPath();
-    ctx.arc(radius * 0.6, radius * 0.8, radius * 0.3, 0, Math.PI * 2);
-    ctx.fill();
-  }
-
-  drawPeach(canvas, size) {
-    const ctx = canvas.getContext('2d');
-    const radius = size / 2;
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    
-    const gradient = ctx.createRadialGradient(radius * 0.8, radius * 0.8, 0, radius, radius, radius * 0.9);
-    gradient.addColorStop(0, '#FFB6C1');
-    gradient.addColorStop(1, '#FF69B4');
-    ctx.fillStyle = gradient;
-    ctx.beginPath();
-    ctx.arc(radius, radius, radius * 0.9, 0, Math.PI * 2);
-    ctx.fill();
-    
-    ctx.strokeStyle = 'rgba(255, 105, 180, 0.6)';
-    ctx.lineWidth = 3;
-    ctx.beginPath();
-    ctx.moveTo(radius, radius * 0.1);
-    ctx.quadraticCurveTo(radius * 0.7, radius, radius, radius * 1.9);
-    ctx.stroke();
-    
-    ctx.fillStyle = 'rgba(255, 255, 255, 0.6)';
-    ctx.beginPath();
-    ctx.arc(radius * 0.6, radius * 0.6, radius * 0.3, 0, Math.PI * 2);
-    ctx.fill();
-  }
-
-  drawPineapple(canvas, size) {
-    const ctx = canvas.getContext('2d');
-    const radius = size / 2;
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    
-    const gradient = ctx.createRadialGradient(radius * 0.8, radius * 0.8, 0, radius, radius, radius * 0.85);
-    gradient.addColorStop(0, '#FFE680');
-    gradient.addColorStop(1, '#FFD700');
-    ctx.fillStyle = gradient;
-    ctx.beginPath();
-    ctx.arc(radius, radius, radius * 0.85, 0, Math.PI * 2);
-    ctx.fill();
-    
-    ctx.strokeStyle = 'rgba(255, 215, 0, 0.6)';
-    ctx.lineWidth = 1.5;
-    for (let i = 0; i < 6; i++) {
-      for (let j = 0; j < 6; j++) {
-        const x = radius * 0.3 + (i * radius * 0.25);
-        const y = radius * 0.3 + (j * radius * 0.25);
-        ctx.strokeRect(x, y, radius * 0.2, radius * 0.2);
-      }
-    }
-    
-    ctx.fillStyle = '#228B22';
-    for (let i = 0; i < 5; i++) {
-      const angle = (Math.PI * 2 * i) / 5;
-      ctx.save();
-      ctx.translate(radius, radius * 0.1);
-      ctx.rotate(angle);
-      ctx.beginPath();
-      ctx.ellipse(0, -radius * 0.4, radius * 0.15, radius * 0.4, 0, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.restore();
-    }
-    
-    ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
-    ctx.beginPath();
-    ctx.arc(radius * 0.6, radius * 0.6, radius * 0.25, 0, Math.PI * 2);
-    ctx.fill();
-  }
-
-  drawMelon(canvas, size) {
-    const ctx = canvas.getContext('2d');
-    const radius = size / 2;
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    
-    const gradient = ctx.createRadialGradient(radius * 0.8, radius * 0.8, 0, radius, radius, radius * 0.9);
-    gradient.addColorStop(0, '#90EE90');
-    gradient.addColorStop(1, '#32CD32');
-    ctx.fillStyle = gradient;
-    ctx.beginPath();
-    ctx.arc(radius, radius, radius * 0.9, 0, Math.PI * 2);
-    ctx.fill();
-    
-    ctx.strokeStyle = 'rgba(50, 205, 50, 0.6)';
-    ctx.lineWidth = 2;
-    for (let i = 0; i < 8; i++) {
-      const angle = (Math.PI * 2 * i) / 8;
-      ctx.beginPath();
-      ctx.moveTo(radius, radius);
-      ctx.lineTo(radius + Math.cos(angle) * radius * 0.9, radius + Math.sin(angle) * radius * 0.9);
-      ctx.stroke();
-    }
-    
-    for (let i = 1; i < 4; i++) {
-      ctx.beginPath();
-      const r = radius * (0.3 * i);
-      ctx.arc(radius, radius, r, 0, Math.PI * 2);
-      ctx.stroke();
-    }
-    
-    ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
-    ctx.beginPath();
-    ctx.arc(radius * 0.6, radius * 0.6, radius * 0.3, 0, Math.PI * 2);
-    ctx.fill();
-  }
-
-  drawWatermelon(canvas, size) {
-    const ctx = canvas.getContext('2d');
-    const radius = size / 2;
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    
-    const gradient = ctx.createRadialGradient(radius * 0.8, radius * 0.8, 0, radius, radius, radius * 0.9);
-    gradient.addColorStop(0, '#228B22');
-    gradient.addColorStop(1, '#006400');
-    ctx.fillStyle = gradient;
-    ctx.beginPath();
-    ctx.arc(radius, radius, radius * 0.9, 0, Math.PI * 2);
-    ctx.fill();
-    
-    ctx.strokeStyle = 'rgba(0, 100, 0, 0.8)';
-    ctx.lineWidth = 3;
-    for (let i = 0; i < 5; i++) {
-      ctx.beginPath();
-      ctx.moveTo(radius * 0.2, radius * (0.2 + i * 0.15));
-      ctx.quadraticCurveTo(radius, radius * (0.2 + i * 0.15), radius * 1.8, radius * (0.2 + i * 0.15));
-      ctx.stroke();
-    }
-    
-    ctx.fillStyle = '#FF0000';
-    ctx.beginPath();
-    ctx.arc(radius, radius, radius * 0.6, 0, Math.PI * 2);
-    ctx.fill();
-    
-    ctx.fillStyle = '#000000';
-    const seeds = [[radius * 0.7, radius * 0.7], [radius * 1.3, radius * 0.7], [radius, radius * 1.1], [radius * 0.8, radius * 0.9], [radius * 1.2, radius * 0.9]];
-    seeds.forEach(([x, y]) => {
-      ctx.beginPath();
-      ctx.ellipse(x, y, radius * 0.08, radius * 0.12, Math.PI / 4, 0, Math.PI * 2);
-      ctx.fill();
-    });
-    
-    ctx.fillStyle = 'rgba(255, 255, 255, 0.4)';
-    ctx.beginPath();
-    ctx.arc(radius * 0.6, radius * 0.6, radius * 0.25, 0, Math.PI * 2);
-    ctx.fill();
+    createFruitTextures(this);
   }
 
   create() {
@@ -463,19 +29,37 @@ export default class MainScene extends Phaser.Scene {
     // Matter.js 월드 경계 설정
     this.matter.world.setBounds(0, 0, width, height);
 
-    // 2. 따뜻한 느낌의 나무색 벽과 바닥
-    const wallColor = 0x8d6e63; // 부드러운 갈색
-    const wallThickness = 38;
+    // 2. 아기자기한 파스텔톤 벽과 바닥
+    const wallBaseColor = 0xffe4e1; // 미스티 로즈 (부드러운 분홍)
+    const wallBorderColor = 0xffb6c1; // 라이트 핑크
+    const wallThickness = 40;
     
     const createStyledWall = (x, y, w, h, label) => {
-      const wall = this.add.rectangle(x, y, w, h, wallColor);
-      this.matter.add.gameObject(wall, { isStatic: true, label });
+      const graphics = this.add.graphics();
       
-      // 상단 테두리 포인트
-      const line = this.add.graphics();
-      line.lineStyle(2, 0x5d4037, 0.8);
-      line.strokeRect(x - w / 2, y - h / 2, w, h);
-      return wall;
+      // 벽 본체 (둥근 느낌을 위해 Graphics 사용)
+      graphics.fillStyle(wallBaseColor, 1);
+      graphics.fillRoundedRect(x - w / 2, y - h / 2, w, h, 15);
+      
+      // 테두리
+      graphics.lineStyle(4, wallBorderColor, 1);
+      graphics.strokeRoundedRect(x - w / 2, y - h / 2, w, h, 15);
+      
+      // 아기자기한 도트 패턴 추가
+      graphics.fillStyle(0xffffff, 0.3);
+      const dotSize = 4;
+      const spacing = 20;
+      for (let px = x - w / 2 + 10; px < x + w / 2 - 10; px += spacing) {
+        for (let py = y - h / 2 + 10; py < y + h / 2 - 10; py += spacing) {
+          graphics.fillCircle(px, py, dotSize);
+        }
+      }
+
+      // Matter.js 물리 바디 설정 (투명한 사각형을 바디로 사용)
+      const wallBody = this.add.rectangle(x, y, w, h, 0x000000, 0);
+      this.matter.add.gameObject(wallBody, { isStatic: true, label });
+      
+      return graphics;
     };
 
     // 바닥
@@ -1204,10 +788,7 @@ export default class MainScene extends Phaser.Scene {
     
     this.previewSprite.setScale(radius / 200);
     this.previewSprite.setAlpha(alpha);
-    
-    // 회전 애니메이션 (천천히 회전)
-    this.previewSpriteRotation = (this.previewSpriteRotation + 0.02) % (Math.PI * 2);
-    this.previewSprite.setRotation(this.previewSpriteRotation);
+    this.previewSprite.setRotation(0);
 
     // 숫자 텍스트 업데이트
     this.previewText.setText(this.previewNumber);
