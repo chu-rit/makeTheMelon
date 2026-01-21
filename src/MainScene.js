@@ -100,10 +100,8 @@ export default class MainScene extends Phaser.Scene {
     bombBtnBg.strokeCircle(0, 0, bombBtnRadius);
     bombBtn.add(bombBtnBg);
 
-    // 폭탄 아이콘 (기존 폭탄 텍스처 활용)
-    // 폭탄은 배열의 마지막 요소
-    const bombLevel = this.fruitConfigs.length - 1;
-    const bombIcon = this.add.sprite(0, 0, `fruit_${bombLevel}`);
+    // 폭탄 아이콘 (타이머 1일 때의 폭탄 텍스처 사용)
+    const bombIcon = this.add.sprite(0, 0, 'fruit_bomb_1');
     bombIcon.setScale(0.3); // 아이콘 크기
     bombBtn.add(bombIcon);
 
@@ -138,8 +136,10 @@ export default class MainScene extends Phaser.Scene {
       this.isDraggingBomb = true;
       // 현재 미리보기 숫자를 폭탄 타이머 초기값으로 가져옴
       this.bombInitialCount = this.previewNumber;
+      // 폭탄은 배열의 마지막 요소
+      const bombLevel = this.fruitConfigs.length - 1;
       this.previewLevel = bombLevel;
-      this.previewNumber = this.bombInitialCount; // 폭탄에도 숫자를 부여 (타이머용)
+      // previewNumber는 그대로 유지 (미리보기 숫자와 떨어트리는 숫자를 일치시키기 위해)
       
       // 터치 위치로 포인터 즉시 업데이트
       this.lastPointerX = pointer.x;
@@ -303,7 +303,7 @@ export default class MainScene extends Phaser.Scene {
     const x = bomb.x;
     const y = bomb.y;
     const blastRadius = 800; // 화면 전체 커버
-    const blastPower = 15; // 적절한 타격감을 위해 조정 (0.5 -> 15)
+    const blastPower = 0.5; // 폭발 힘 최소화 (1.5 -> 0.5)
 
     // 이펙트
     this.createExplosionEffect(x, y);
@@ -333,9 +333,11 @@ export default class MainScene extends Phaser.Scene {
         let dirX = Math.cos(angle);
         let dirY = Math.sin(angle);
 
-        // 위로 솟구치도록 Y축 보정
-        dirY -= 0.5; // 너무 강하지 않게 조정 (-2.5 -> -0.5)
-
+        // 위로 튀어오르는 힘 억제 (상향 벡터 감쇠)
+        if (dirY < 0) {
+          dirY *= 0.1; // 위로 향하는 힘을 10%로 줄임 (거의 뜨지 않음)
+        }
+        
         // Matter.js 힘 적용
         this.matter.body.applyForce(fruit.body, fruit.body.position, {
           x: dirX * forceMagnitude,
@@ -411,7 +413,11 @@ export default class MainScene extends Phaser.Scene {
     const dropY = this.previewY;
 
     // 스프라이트 기반 과일 생성
-    const fruit = this.add.sprite(dropX, dropY, `fruit_${dropLevel}`);
+    let textureKey = `fruit_${dropLevel}`;
+    if (this.fruitConfigs[dropLevel].isBomb) {
+      textureKey = `fruit_bomb_${dropNumber}`;
+    }
+    const fruit = this.add.sprite(dropX, dropY, textureKey);
     
     // 폭탄 과일은 텍스처 내 여백이 많으므로(스케일 0.75) 더 크게 확대해야 물리 바디와 일치함
     // 일반 과일: radius / 170 (텍스처 내 반지름 약 170px 기준)
@@ -462,6 +468,9 @@ export default class MainScene extends Phaser.Scene {
     fruit.initialY = dropY;
     this.fruits.push(fruit);
 
+    // 현재 과일 개수 로깅
+    console.log(`현재 과일 개수: ${this.fruits.length}`);
+
     // 과일 숫자 텍스트 추가
     const config = this.fruitConfigs[dropLevel];
     
@@ -479,19 +488,18 @@ export default class MainScene extends Phaser.Scene {
 
     // 폭탄일 경우 타이머 텍스트 스타일 적용
     if (config.isBomb) {
-      // 폭탄 타이머 설정
-      fruit.bombTimer = dropNumber; // 드롭 시점의 숫자가 타이머가 됨
+      // 폭탄 타이머 설정 - 미리보기 숫자를 그대로 사용
+      fruit.bombTimer = this.previewNumber; // 미리보기 숫자를 그대로 타이머로 사용
       textContent = `${fruit.bombTimer}`; // '3' 형식 (단일 숫자)
       
       textStyle = {
-        fontSize: '48px', // 전광판에 꽉 차게 큼직하게
-        color: '#ff0000', // 빨간색 (LED)
-        fontFamily: 'Courier New', // 디지털 폰트
+        fontSize: '42px', // 이전 미리보기 과일과 동일한 크기
+        color: '#ffffff', // 흰색 (이전 미리보기 과일과 동일)
+        fontFamily: 'Arial Black', // Arial Black 폰트 (이전 미리보기 과일과 동일)
         fontWeight: 'bold',
-        align: 'center',
-        stroke: '#550000',
-        strokeThickness: 4,
-        shadow: { color: '#ff0000', blur: 15, fill: true, stroke: true } // 강한 글로우
+        stroke: '#ff4444', // 빨간색 테두리 (이전 미리보기 과일과 동일)
+        strokeThickness: 6, // 테두리 두께 (이전 미리보기 과일과 동일)
+        shadow: { color: '#000000', blur: 4, fill: true, stroke: true, offsetX: 2, offsetY: 2 } // 그림자 효과 (이전 미리보기 과일과 동일)
       };
     }
 
@@ -519,6 +527,11 @@ export default class MainScene extends Phaser.Scene {
         // 텍스트 업데이트
         if (existingFruit.fruitText) {
           existingFruit.fruitText.setText(`${existingFruit.bombTimer}`);
+        }
+        
+        // 텍스처 업데이트 (심지 길이 및 표정 변화 반영)
+        if (existingFruit.bombTimer >= 0) {
+          existingFruit.setTexture(`fruit_bomb_${existingFruit.bombTimer}`);
         }
         
         // 0이 되면 폭발 대기
@@ -625,6 +638,7 @@ export default class MainScene extends Phaser.Scene {
     if (pointerX > this.scale.width) pointerX = this.scale.width;
     
     const fixedY = 100;
+    const wallThickness = 100; // 벽 두께와 일치시킴
 
     // 미리보기 과일 업데이트 (쿨다운 중이 아닐 때만)
     if (this.canDrop) {
@@ -635,9 +649,9 @@ export default class MainScene extends Phaser.Scene {
         const radius = fruitConfig.radius;
         
         // 미리보기 x좌표 계산 (벽을 넘어가지 않도록)
-        // 8각형의 최대 x 오프셋은 radius * cos(0) = radius
-        const minX = radius + 38; // 왼쪽 벽 두께 고려
-        const maxX = this.scale.width - radius - 38; // 오른쪽 벽 두께 고려
+        // 벽 두께(100)를 고려하여 clamping 범위 조정
+        const minX = radius + wallThickness; 
+        const maxX = this.scale.width - radius - wallThickness;
         const adjustedX = Phaser.Math.Clamp(pointerX, minX, maxX);
         
         this.updatePreview(adjustedX, fixedY);
@@ -667,7 +681,7 @@ export default class MainScene extends Phaser.Scene {
     this.checkGameOver();
 
     // 화면 이탈 방지 (안전장치) - 폭탄 폭발로 인한 터널링 방지
-    const wallThickness = 100; // 벽 두께와 일치시킴
+    // wallThickness는 위에서 이미 선언됨
     this.fruits.forEach(fruit => {
       if (!fruit.body) return;
 
@@ -1114,14 +1128,14 @@ export default class MainScene extends Phaser.Scene {
       textContent = `${fruit.bombTimer}`;
       
       textStyle = {
-        fontSize: '34px',
-        color: '#ff0000',
-        fontFamily: 'Courier New',
+        fontSize: '42px',
+        color: '#ffffff',
+        fontFamily: 'Arial Black',
         fontWeight: 'bold',
         align: 'center',
-        stroke: '#550000',
-        strokeThickness: 3,
-        shadow: { color: '#ff0000', blur: 10, fill: true, stroke: true }
+        stroke: '#ff4444',
+        strokeThickness: 6,
+        shadow: { color: '#000000', blur: 4, fill: true, stroke: true, offsetX: 2, offsetY: 2 }
       };
     }
 
@@ -1236,14 +1250,19 @@ export default class MainScene extends Phaser.Scene {
 
     // 스프라이트 기반 미리보기 (텍스처 사용)
     // sprite.scene이 없으면 destroyed된 상태이므로 새로 생성해야 함
+    let textureKey = `fruit_${this.previewLevel}`;
+    if (fruitConfig.isBomb) {
+      textureKey = `fruit_bomb_${this.previewNumber}`;
+    }
+
     if (!this.previewSprite || !this.previewSprite.active || !this.previewSprite.scene) {
-      this.previewSprite = this.add.sprite(mouseX, mouseY, `fruit_${this.previewLevel}`);
+      this.previewSprite = this.add.sprite(mouseX, mouseY, textureKey);
       this.previewSprite.setOrigin(0.5, 0.5);
       this.previewSprite.setDepth(5);
       this.previewSpriteRotation = 0;
     } else {
       // 기존 스프라이트 업데이트
-      this.previewSprite.setTexture(`fruit_${this.previewLevel}`);
+      this.previewSprite.setTexture(textureKey);
       this.previewSprite.setPosition(mouseX, mouseY);
     }
     
@@ -1272,13 +1291,13 @@ export default class MainScene extends Phaser.Scene {
     if (fruitConfig.isBomb) {
       textContent = `${this.previewNumber}`;
       textStyle = {
-        fontSize: '34px',
-        color: '#ff0000',
-        fontFamily: 'Courier New',
+        fontSize: '42px', // 이전 미리보기 과일과 동일한 크기
+        color: '#ffffff', // 흰색 (이전 미리보기 과일과 동일)
+        fontFamily: 'Arial Black', // Arial Black 폰트 (이전 미리보기 과일과 동일)
         fontWeight: 'bold',
-        stroke: '#550000',
-        strokeThickness: 3,
-        shadow: { color: '#ff0000', blur: 10, fill: true, stroke: true }
+        stroke: '#ff4444', // 빨간색 테두리 (이전 미리보기 과일과 동일)
+        strokeThickness: 6, // 테두리 두께 (이전 미리보기 과일과 동일)
+        shadow: { color: '#000000', blur: 4, fill: true, stroke: true, offsetX: 2, offsetY: 2 } // 그림자 효과 (이전 미리보기 과일과 동일)
       };
     }
 

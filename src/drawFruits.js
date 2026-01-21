@@ -17,42 +17,39 @@ export function createFruitTextures(scene) {
     drawBomb
   ];
 
+  function createTexture(scene, key, drawer, number = 9) {
+    // 이미 텍스처가 존재하면 제거하고 다시 생성 (새로운 스타일 적용 및 충돌 방지)
+    if (scene.textures.exists(key)) {
+      scene.textures.remove(key);
+    }
+
+    const canvas = document.createElement('canvas');
+    canvas.width = 400;
+    canvas.height = 400;
+    drawer(canvas, 400, number);
+
+    const texture = scene.textures.createCanvas(key, canvas.width, canvas.height);
+    if (texture) {
+      const ctx = texture.getContext();
+      ctx.drawImage(canvas, 0, 0);
+      texture.refresh();
+    }
+  }
+
   fruitDrawers.forEach((drawer, index) => {
     if (drawer) {
-      const key = `fruit_${index}`;
-      
-      // 이미 텍스처가 존재하면 제거하고 다시 생성 (새로운 스타일 적용 및 충돌 방지)
-      if (scene.textures.exists(key)) {
-        scene.textures.remove(key);
-      }
+      if (index === 12) {
+        // 1. 기본 텍스처 (fruit_12) - 가장 평온한 상태 (숫자 9)
+        createTexture(scene, `fruit_${index}`, drawer, 9);
 
-      const canvas = document.createElement('canvas');
-      canvas.width = 400;
-      canvas.height = 400;
-      drawer(canvas, 400);
-
-      // 숫자가 잘 보이도록 중앙에 어두운 그라데이션 추가
-      const shadowCtx = canvas.getContext('2d');
-      shadowCtx.setTransform(1, 0, 0, 1, 0, 0); // 컨텍스트 변환 초기화
-      const cx = canvas.width / 2;
-      const cy = canvas.height / 2;
-      const bgRadius = canvas.width * 0.3; // 텍스처 크기의 30%
-
-      const textBgGradient = shadowCtx.createRadialGradient(cx, cy, 0, cx, cy, bgRadius);
-      textBgGradient.addColorStop(0, 'rgba(0, 0, 0, 0.5)'); // 중앙은 반투명 검정
-      textBgGradient.addColorStop(0.6, 'rgba(0, 0, 0, 0.1)');
-      textBgGradient.addColorStop(1, 'rgba(0, 0, 0, 0)'); // 가장자리는 투명
-
-      shadowCtx.fillStyle = textBgGradient;
-      shadowCtx.beginPath();
-      shadowCtx.arc(cx, cy, bgRadius, 0, Math.PI * 2);
-      shadowCtx.fill();
-      
-      const texture = scene.textures.createCanvas(key, canvas.width, canvas.height);
-      if (texture) {
-        const ctx = texture.getContext();
-        ctx.drawImage(canvas, 0, 0);
-        texture.refresh();
+        // 2. 카운트다운별 텍스처 (fruit_bomb_0 ~ fruit_bomb_9)
+        // 0은 폭발 직전 (가장 화난 상태)
+        for (let i = 0; i <= 9; i++) {
+          createTexture(scene, `fruit_bomb_${i}`, drawer, i);
+        }
+      } else {
+        // 일반 과일
+        createTexture(scene, `fruit_${index}`, drawer);
       }
     }
   });
@@ -97,6 +94,90 @@ function drawFruitFace(ctx, x, y, radius) {
   ctx.ellipse(x - radius * 0.55, blushY, blushW, blushH, 0, 0, Math.PI * 2);
   ctx.ellipse(x + radius * 0.55, blushY, blushW, blushH, 0, 0, Math.PI * 2);
   ctx.fill();
+}
+
+function drawAngryFace(ctx, x, y, radius, angerLevel = 0) {
+  ctx.fillStyle = '#FFFFFF';
+  ctx.strokeStyle = '#FFFFFF';
+  
+  // angerLevel: 0 (무표정/평온) ~ 1 (극대노)
+  
+  // 1. 눈 (눈썹에 눌린 반달 눈)
+  const eyeOffset = radius * 0.35; 
+  const eyeY = y - radius * 0.05;
+  const eyeSize = radius * 0.25;
+  
+  // 레벨 0일 땐 회전 없음(동그란 눈), 레벨 1일 땐 0.6라디안(날카로운 눈)
+  const eyeRotate = angerLevel * 0.6; 
+  // 레벨 0일 땐 원형(1.0), 레벨 1일 땐 찌그러짐(0.6)
+  const eyeScaleY = 1.0 - (angerLevel * 0.4); 
+
+  // 왼쪽 눈
+  ctx.save();
+  ctx.translate(x - eyeOffset, eyeY);
+  ctx.rotate(eyeRotate);
+  ctx.scale(1, eyeScaleY);
+  ctx.beginPath();
+  ctx.arc(0, 0, eyeSize, Math.PI, 0, true);
+  ctx.fill();
+  ctx.restore();
+
+  // 오른쪽 눈
+  ctx.save();
+  ctx.translate(x + eyeOffset, eyeY);
+  ctx.rotate(-eyeRotate);
+  ctx.scale(1, eyeScaleY);
+  ctx.beginPath();
+  ctx.arc(0, 0, eyeSize, Math.PI, 0, true);
+  ctx.fill();
+  ctx.restore();
+
+  // 2. 눈썹
+  ctx.lineWidth = radius * 0.15; 
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+  ctx.beginPath();
+  
+  // 미간 간격: 평온할 땐 넓고(1.3), 화날 땐 좁음(0.3)
+  const browGap = eyeSize * (1.3 - angerLevel * 1.0); 
+  
+  // 눈썹 중심 높이: 평온할 땐 눈 위(-0.5), 화날 땐 눈 아래로 덮침(0.5)
+  // eyeSize 기준 상대 좌표 사용
+  const browCenterYOffset = -0.5 + (angerLevel * 1.0); 
+  const browOuterYOffset = -0.5 - (angerLevel * 0.3); // 바깥쪽은 화날수록 살짝 올라감(치켜뜸)
+
+  // 왼쪽 눈썹
+  // 바깥 -> 안쪽
+  ctx.moveTo(x - eyeOffset - eyeSize * 1.0, eyeY + eyeSize * browOuterYOffset);
+  ctx.lineTo(x - browGap * 0.5, eyeY + eyeSize * browCenterYOffset);
+  
+  // 오른쪽 눈썹
+  // 안쪽 -> 바깥
+  ctx.moveTo(x + browGap * 0.5, eyeY + eyeSize * browCenterYOffset);
+  ctx.lineTo(x + eyeOffset + eyeSize * 1.0, eyeY + eyeSize * browOuterYOffset);
+  
+  ctx.stroke();
+
+  // 3. 입
+  ctx.lineWidth = radius * 0.08;
+  ctx.beginPath();
+  
+  const mouthY = y + radius * 0.45;
+  const mouthW = radius * 0.35;
+  
+  if (angerLevel < 0.2) {
+    // 평온할 땐 일자 입 혹은 살짝 둥근 입
+    ctx.moveTo(x - mouthW * 0.8, mouthY);
+    ctx.lineTo(x + mouthW * 0.8, mouthY);
+  } else {
+    // 화날수록 삐죽거리는 정도(굴곡) 심화
+    const mouthCurve = radius * (angerLevel * 0.4); 
+    ctx.moveTo(x - mouthW, mouthY + mouthCurve);
+    ctx.quadraticCurveTo(x, mouthY - mouthCurve, x + mouthW, mouthY + mouthCurve);
+  }
+  ctx.stroke();
+  
+  // 4. 홍조 없음
 }
 
 function drawCherry(canvas, size) {
@@ -214,67 +295,30 @@ function drawGrape(canvas, size) {
   ctx.arc(cx, cy, bodyRadius, 0, Math.PI * 2);
   ctx.fill();
 
-  // 3. 꼭지
-  ctx.strokeStyle = '#5D4037';
-  ctx.lineWidth = size * 0.04;
+  // 3. 꼭지 (강조됨 - 두껍고 튼튼하게)
+  ctx.strokeStyle = '#4A3728'; // 진한 나무색
+  ctx.lineWidth = size * 0.08; // 두께 2배 증가 (0.04 -> 0.08)
   ctx.lineCap = 'round';
   ctx.lineJoin = 'round';
   ctx.beginPath();
   
   const stemStartY = cy - bodyRadius * 0.85;
-  const stemEndY = cy - bodyRadius * 1.15;
+  const stemEndY = cy - bodyRadius * 1.3; // 길이 증가
   
+  // 메인 줄기 (약간의 곡선)
   ctx.moveTo(cx, stemStartY);
-  ctx.quadraticCurveTo(cx + 5, stemStartY - 15, cx - 10, stemEndY);
+  ctx.quadraticCurveTo(cx + 5, stemStartY - 20, cx - 5, stemEndY);
   ctx.stroke();
 
-  // 4. 포도 잎사귀 (넓고 뾰족한 3갈래 잎)
-  ctx.fillStyle = '#80ED99';
-  ctx.strokeStyle = '#57CC99';
-  ctx.lineWidth = 2;
-  
-  const leafCenterX = cx - 15;
-  const leafCenterY = stemEndY + 10;
-  
-  ctx.save();
-  ctx.translate(leafCenterX, leafCenterY);
-  ctx.rotate(-Math.PI / 6); // 약간 기울임
-  
+  // 꼭지 끝부분 단면 (입체감)
+  ctx.fillStyle = '#6D4C41';
   ctx.beginPath();
-  // 3갈래 잎 그리기
-  ctx.moveTo(0, 0);
-  // 왼쪽 잎
-  ctx.quadraticCurveTo(-20, -10, -30, -5); 
-  ctx.quadraticCurveTo(-35, 10, -15, 15);
-  // 중앙 잎
-  ctx.quadraticCurveTo(-5, 30, 0, 40);
-  ctx.quadraticCurveTo(5, 30, 15, 15);
-  // 오른쪽 잎
-  ctx.quadraticCurveTo(35, 10, 30, -5);
-  ctx.quadraticCurveTo(20, -10, 0, 0);
-  
+  ctx.ellipse(cx - 5, stemEndY, size * 0.04, size * 0.02, 0, 0, Math.PI * 2);
   ctx.fill();
-  ctx.stroke();
-  
-  // 잎맥
-  ctx.strokeStyle = '#3CB371'; // 조금 더 진한 색
-  ctx.beginPath();
-  ctx.moveTo(0, 0); ctx.lineTo(-20, 5); // 왼쪽
-  ctx.moveTo(0, 0); ctx.lineTo(0, 25);  // 중앙
-  ctx.moveTo(0, 0); ctx.lineTo(20, 5);  // 오른쪽
-  ctx.stroke();
-  
-  ctx.restore();
-  
-  // 5. 덩굴손 (포도 특징)
-  ctx.strokeStyle = '#80ED99';
-  ctx.lineWidth = 3;
-  ctx.beginPath();
-  ctx.moveTo(cx - 10, stemEndY + 20);
-  ctx.bezierCurveTo(cx - 30, stemEndY + 20, cx - 30, stemEndY + 50, cx - 10, stemEndY + 40); // 꼬불
-  ctx.stroke();
 
-  // 6. 하이라이트
+  // 4. 잎사귀 및 덩굴손 제거됨
+
+  // 5. 하이라이트
   ctx.fillStyle = 'rgba(255, 255, 255, 0.85)';
   ctx.beginPath();
   ctx.ellipse(cx - bodyRadius * 0.3, cy - bodyRadius * 0.45, bodyRadius * 0.15, bodyRadius * 0.08, 0, 0, Math.PI * 2);
@@ -336,26 +380,108 @@ function drawStrawberry(canvas, size) {
     ctx.fill();
   });
   
-  // 잎 (조금 더 넓게 퍼지도록 수정)
-  ctx.fillStyle = '#228B22';
+  // 잎 (이미지 참고: 5갈래 둥근 별/꽃 모양 + 머리카락 느낌)
+  ctx.fillStyle = '#006400'; // DarkGreen
+  ctx.strokeStyle = '#004d00';
+  ctx.lineWidth = 2;
+  ctx.lineJoin = 'round';
+  ctx.lineCap = 'round';
+
+  ctx.save();
+  ctx.translate(radius, radius * 0.15); // 꼭지 위치
+  
+  // 약간 기울여서 자연스럽게
+  ctx.rotate(-0.2); 
+
+  const numPetals = 5;
+  const innerRadius = radius * 0.15; // 안쪽도 약간 키움
+  const outerRadius = radius * 0.55; // 크기 대폭 확대 (머리처럼 덮이게)
+
   ctx.beginPath();
-  // 중앙 잎
-  ctx.moveTo(radius, radius * 0.15);
-  ctx.quadraticCurveTo(radius * 0.9, radius * 0.35, radius, radius * 0.45);
-  ctx.quadraticCurveTo(radius * 1.1, radius * 0.35, radius, radius * 0.15);
+  for (let i = 0; i < numPetals * 2; i++) {
+    const angle = (Math.PI * i) / numPetals - Math.PI / 2;
+    // 짝수 인덱스는 바깥쪽 점(잎 끝), 홀수 인덱스는 안쪽 점(잎 사이)
+    const r = (i % 2 === 0) ? outerRadius : innerRadius;
+    
+    const currX = Math.cos(angle) * r;
+    const currY = Math.sin(angle) * r;
+    
+    if (i === 0) {
+      ctx.moveTo(currX, currY);
+    } else {
+      // 머리카락처럼 부드럽게 이어지도록 곡선 사용
+      const prevAngle = (Math.PI * (i - 1)) / numPetals - Math.PI / 2;
+      const prevR = ((i - 1) % 2 === 0) ? outerRadius : innerRadius;
+      const prevX = Math.cos(prevAngle) * prevR;
+      const prevY = Math.sin(prevAngle) * prevR;
+      
+      // 제어점 계산 (둥글게 부풀리기)
+      // 바깥쪽으로 나갈 때는 볼록하게, 안쪽으로 들어올 때는 오목하게
+      const cpAngle = (prevAngle + angle) / 2;
+      // 잎사귀 끝부분을 둥글고 통통하게 (머리카락 볼륨감)
+      let cpR;
+      if (i % 2 !== 0) { 
+        // 바깥 -> 안쪽 (잎의 옆면): 약간 볼록하게
+        cpR = (prevR + r) * 0.6; 
+      } else {
+        // 안쪽 -> 바깥 (잎의 옆면): 약간 오목하게
+        cpR = (prevR + r) * 0.6;
+      }
+      
+      const cpX = Math.cos(cpAngle) * cpR;
+      const cpY = Math.sin(cpAngle) * cpR;
+      
+      ctx.quadraticCurveTo(cpX, cpY, currX, currY);
+    }
+  }
+  // 마지막 점 연결
+  const firstAngle = -Math.PI / 2;
+  const firstX = Math.cos(firstAngle) * outerRadius;
+  const firstY = Math.sin(firstAngle) * outerRadius;
+  const lastAngle = (Math.PI * (numPetals * 2 - 1)) / numPetals - Math.PI / 2;
+  const cpAngleEnd = (lastAngle + firstAngle + Math.PI*2) / 2; // 각도 보정
+  // 마지막 연결 부드럽게
+  const cpR_End = (innerRadius + outerRadius) * 0.6;
+  const cpX_End = Math.cos(lastAngle + Math.PI/(numPetals*2)) * cpR_End; 
+  const cpY_End = Math.sin(lastAngle + Math.PI/(numPetals*2)) * cpR_End;
   
-  // 왼쪽 잎들
-  ctx.moveTo(radius, radius * 0.15);
-  ctx.quadraticCurveTo(radius * 0.6, radius * 0.25, radius * 0.35, radius * 0.45); // 더 넓게
-  ctx.quadraticCurveTo(radius * 0.7, radius * 0.2, radius, radius * 0.15);
+  ctx.quadraticCurveTo(cpX_End, cpY_End, firstX, firstY);
+
+  ctx.closePath();
   
-  // 오른쪽 잎들
-  ctx.moveTo(radius, radius * 0.15);
-  ctx.quadraticCurveTo(radius * 1.4, radius * 0.25, radius * 1.65, radius * 0.45); // 더 넓게
-  ctx.quadraticCurveTo(radius * 1.3, radius * 0.2, radius, radius * 0.15);
+  // 입체감을 위한 그림자
+  ctx.shadowColor = 'rgba(0, 0, 0, 0.3)';
+  ctx.shadowBlur = 5;
+  ctx.shadowOffsetY = 3;
+  
+  ctx.fill();
+  ctx.shadowBlur = 0; // 그림자 초기화
+  ctx.shadowOffsetY = 0;
+  ctx.stroke();
+  
+  // 꼭지 중앙 (줄기 연결부)
+  ctx.fillStyle = '#004d00';
+  ctx.beginPath();
+  ctx.arc(0, 0, radius * 0.06, 0, Math.PI * 2);
   ctx.fill();
   
-  // 광택
+  // 짧은 줄기 (귀여움 포인트 - 약간 더 굵게)
+  ctx.lineWidth = 5;
+  ctx.strokeStyle = '#006400';
+  ctx.beginPath();
+  ctx.moveTo(0, 0);
+  ctx.quadraticCurveTo(5, -12, 12, -18);
+  ctx.stroke();
+
+  ctx.restore();
+  
+  // 광택 (머리 위에 하이라이트)
+  ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
+  ctx.beginPath();
+  ctx.ellipse(radius - radius * 0.3, radius * 0.15, radius * 0.15, radius * 0.08, -0.5, 0, Math.PI * 2);
+  ctx.fill();
+  
+  // 얼굴 광택
   ctx.fillStyle = 'rgba(255, 255, 255, 0.4)';
   ctx.beginPath();
   ctx.ellipse(radius * 0.7, radius * 0.7, radius * 0.15, radius * 0.2, 0.2, 0, Math.PI * 2);
@@ -946,152 +1072,198 @@ function drawWatermelon(canvas, size) {
   drawFruitFace(ctx, radius, radius, radius * 0.7);
 }
 
-function drawBomb(canvas, size) {
+function drawBomb(canvas, size, timerValue = 9) {
   const ctx = canvas.getContext('2d');
   const radius = size / 2;
   ctx.clearRect(0, 0, canvas.width, canvas.height);
   
   // 1. 스케일 및 위치 조정
   ctx.translate(radius, radius);
-  ctx.scale(0.75, 0.75);
+  ctx.scale(0.75, 0.75); // 스케일 유지 (물리 바디 크기 일치)
   ctx.translate(-radius, -radius);
   
-  // 2. 몸통 (수류탄 + 파인애플 느낌)
-  const gradient = ctx.createRadialGradient(radius * 0.4, radius * 0.4, 0, radius, radius, radius);
-  gradient.addColorStop(0, '#6B8E23'); // Olive Drab (밝은 국방색)
-  gradient.addColorStop(0.5, '#556B2F'); // Dark Olive Green
-  gradient.addColorStop(1, '#2F3518'); // 아주 어두운 국방색
+  // 2. 몸통 (매끈한 검은 폭탄 과일)
+  const gradient = ctx.createRadialGradient(radius * 0.3, radius * 0.3, 0, radius, radius, radius);
+  gradient.addColorStop(0, '#666666'); // 밝은 회색 하이라이트
+  gradient.addColorStop(0.3, '#333333'); 
+  gradient.addColorStop(1, '#000000'); // 완전 검은색
   
   ctx.fillStyle = gradient;
   ctx.beginPath();
   ctx.arc(radius, radius, radius * 0.95, 0, Math.PI * 2);
   ctx.fill();
-  
-  // 3. 격자 무늬 (수류탄 파편/파인애플 껍질)
-  ctx.strokeStyle = 'rgba(0, 0, 0, 0.4)';
-  ctx.lineWidth = 6;
-  ctx.lineCap = 'round';
-  
-  // 가로선
-  for (let i = 1; i < 6; i++) {
-    const y = radius * 0.4 + (radius * 1.2 * i) / 6;
-    ctx.beginPath();
-    ctx.ellipse(radius, y, radius * 0.9, radius * 0.2, 0, 0, Math.PI * 2);
-    ctx.stroke();
-  }
-  
-  // 사선 (격자)
-  ctx.save();
-  ctx.beginPath();
-  ctx.arc(radius, radius, radius * 0.95, 0, Math.PI * 2);
-  ctx.clip();
-  
-  for (let i = -3; i < 4; i++) {
-    ctx.beginPath();
-    ctx.moveTo(radius + i * 40 - 100, 0);
-    ctx.lineTo(radius + i * 40 + 100, size);
-    ctx.stroke();
-    
-    ctx.beginPath();
-    ctx.moveTo(radius + i * 40 + 100, 0);
-    ctx.lineTo(radius + i * 40 - 100, size);
-    ctx.stroke();
-  }
-  ctx.restore();
 
-  // 4. T자형 과일 꼭지 (멜론 스타일 + 국방색 테마) - 크기 및 두께 대폭 확대
+  // 3. 심지 (Wick) - timerValue에 따라 길이 변화
+  // timerValue: 9(최대 길이) ~ 1(최소 길이)
+  // 최소 길이여도 약간은 보여야 함
+  const maxWickLen = 100;
+  const minWickLen = 20;
+  const wickProgress = Math.max(0, Math.min(1, (timerValue - 1) / 8)); // 0 ~ 1
+  const wickLength = minWickLen + wickProgress * (maxWickLen - minWickLen);
+  
   const stemY = radius - radius * 0.95;
   
-  ctx.strokeStyle = '#556B2F'; // DarkOliveGreen
-  ctx.fillStyle = '#6B8E23'; // OliveDrab
-  ctx.lineWidth = 14; // 두께 증가 (8 -> 14)
+  // 심지 그리기 (베지어 곡선으로 꼬불거리게)
+  ctx.strokeStyle = '#D2B48C'; // Tan 색상 (심지)
+  ctx.lineWidth = 8;
   ctx.lineCap = 'round';
-  ctx.lineJoin = 'round';
-
-  // T자 세로 기둥
   ctx.beginPath();
   ctx.moveTo(radius, stemY);
-  ctx.lineTo(radius, stemY - 55); // 길이 증가 (35 -> 55)
-  ctx.stroke();
   
-  // T자 가로 기둥
-  ctx.beginPath();
-  ctx.moveTo(radius - 45, stemY - 55); // 폭 증가 (25 -> 45)
-  ctx.lineTo(radius + 45, stemY - 55);
+  // 심지 끝점 계산 (단순화된 곡선)
+  // 길이가 길수록 더 꼬불거림
+  const cp1x = radius + 20;
+  const cp1y = stemY - wickLength * 0.5;
+  const cp2x = radius - 20;
+  const cp2y = stemY - wickLength;
+  const endX = radius + (wickLength > 60 ? 10 : 0); // 긴 심지는 약간 옆으로
+  const endY = stemY - wickLength;
+  
+  ctx.bezierCurveTo(cp1x, cp1y, cp2x, cp2y, endX, endY);
   ctx.stroke();
 
-  // 꼭지 연결부 (더 크게)
+  // 4. 불꽃 (심지 끝에 달림)
+  // 불꽃은 항상 그림
+  const flameSize = 15 + Math.random() * 5; // 약간의 크기 변화
+  
+  // 불꽃 외곽 (노랑)
+  ctx.fillStyle = '#FFD700';
   ctx.beginPath();
-  ctx.arc(radius, stemY, 16, 0, Math.PI * 2); // 크기 증가 (12 -> 16)
+  ctx.arc(endX, endY, flameSize, 0, Math.PI * 2);
+  ctx.fill();
+  
+  // 불꽃 중간 (주황)
+  ctx.fillStyle = '#FFA500';
+  ctx.beginPath();
+  ctx.arc(endX, endY + 2, flameSize * 0.7, 0, Math.PI * 2);
+  ctx.fill();
+  
+  // 불꽃 심 (빨강)
+  ctx.fillStyle = '#FF4500';
+  ctx.beginPath();
+  ctx.arc(endX, endY + 4, flameSize * 0.4, 0, Math.PI * 2);
   ctx.fill();
 
-  // 꼭지 하이라이트 (입체감 추가)
-  ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
-  ctx.lineWidth = 4;
+  // 꼭지 연결부 (금속 캡)
+  ctx.fillStyle = '#555555';
   ctx.beginPath();
-  ctx.moveTo(radius - 35, stemY - 58);
-  ctx.lineTo(radius + 35, stemY - 58);
-  ctx.stroke();
+  ctx.fillRect(radius - 12, stemY - 5, 24, 15);
   
-  // 5. 디지털 전광판 (중앙) - 세로 높이 확대
-  const displayW = radius * 0.85;
-  const displayH = radius * 0.85; // 높이 대폭 확대 (0.6 -> 0.85)
-  const displayX = radius - displayW / 2;
-  const displayY = radius - displayH / 2;
-
-  // 전광판 하우징 (금속 케이스)
-  ctx.fillStyle = '#444'; // 진한 회색 금속
+  // 5. 광택 (매끈한 질감)
+  ctx.fillStyle = 'rgba(255, 255, 255, 0.15)';
   ctx.beginPath();
-  ctx.roundRect(displayX - 6, displayY - 6, displayW + 12, displayH + 12, 10);
-  ctx.fill();
-  
-  // 하우징 테두리 (입체감)
-  ctx.strokeStyle = '#222';
-  ctx.lineWidth = 1;
-  ctx.stroke();
-  
-  // 볼트 (하우징 고정용)
-  ctx.fillStyle = '#AAA';
-  const boltInset = 2;
-  ctx.beginPath();
-  ctx.arc(displayX - boltInset, displayY - boltInset, 3, 0, Math.PI * 2);
-  ctx.arc(displayX + displayW + boltInset, displayY - boltInset, 3, 0, Math.PI * 2);
-  ctx.arc(displayX - boltInset, displayY + displayH + boltInset, 3, 0, Math.PI * 2);
-  ctx.arc(displayX + displayW + boltInset, displayY + displayH + boltInset, 3, 0, Math.PI * 2);
+  ctx.ellipse(radius * 0.6, radius * 0.6, radius * 0.3, radius * 0.2, -0.5, 0, Math.PI * 2);
   ctx.fill();
 
-  // 전광판 화면 (검은색)
-  ctx.fillStyle = '#000000';
-  ctx.beginPath();
-  ctx.roundRect(displayX, displayY, displayW, displayH, 6);
-  ctx.fill();
-  
-  // 화면 내부 격자 (LED 도트 매트릭스 느낌)
-  ctx.fillStyle = 'rgba(30, 30, 30, 1)';
-  const gridSize = 5;
-  for(let dy = 0; dy < displayH; dy += gridSize) {
-    for(let dx = 0; dx < displayW; dx += gridSize) {
-      ctx.fillRect(displayX + dx, displayY + dy, gridSize - 1, gridSize - 1);
-    }
+  // 6. 화남 단계 계산
+  // 5 이상일 땐 무표정(0), 5 미만부터 급격히 화남
+  let angerLevel = 0;
+  if (timerValue < 5) {
+    // 4.9 -> 0.025 ... 1.0 -> 1.0
+    angerLevel = (5 - timerValue) / 4;
+    angerLevel = Math.max(0, Math.min(1, angerLevel));
   }
 
-  // 화면 글래스 광택 (유리 질감)
-  const gloss = ctx.createLinearGradient(displayX, displayY, displayX + displayW, displayY + displayH);
-  gloss.addColorStop(0, 'rgba(255, 255, 255, 0.15)');
-  gloss.addColorStop(0.4, 'rgba(255, 255, 255, 0)');
-  gloss.addColorStop(1, 'rgba(255, 255, 255, 0.05)');
+  // 7. 얼굴 (아기자기함의 핵심)
+  drawAngryFace(ctx, radius, radius, radius * 0.7, angerLevel);
   
-  ctx.fillStyle = gloss;
-  ctx.beginPath();
-  ctx.roundRect(displayX, displayY, displayW, displayH, 6);
-  ctx.fill();
+  // 8. 화남 단계 표현 (이마에 붉은색 터치)
+  if (angerLevel > 0) {
+    const angerAlpha = angerLevel * 0.8; // 최대 0.8 투명도 (더 진하게)
+    
+    // 이마 부분 그라데이션
+    const angerGrad = ctx.createRadialGradient(radius, radius * 0.6, 0, radius, radius * 0.6, radius * 0.6);
+    angerGrad.addColorStop(0, `rgba(255, 0, 0, ${angerAlpha})`);
+    angerGrad.addColorStop(1, 'rgba(255, 0, 0, 0)');
+    
+    ctx.fillStyle = angerGrad;
+    ctx.beginPath();
+    // 얼굴 위쪽 중심으로 붉은 기운
+    ctx.arc(radius, radius * 0.6, radius * 0.6, 0, Math.PI * 2);
+    ctx.fill();
+    
+    // 빠직 마크 (💢) 추가 - 막바지(2 이하)에 표시
+    if (timerValue <= 2) {
+      // 위치 및 크기 설정
+      const markX = radius + radius * 0.45; // 조금 더 바깥쪽으로
+      const markY = radius - radius * 0.45;
+      const size = 25; // 크기 줄임 (50 -> 35)
+      
+      // 마크 그리기 함수 (재사용)
+      const drawVeinMark = (ctx, x, y, s) => {
+        // 4개 사각형이 합쳐져 하나인 것처럼 보이고 바깥이 훨씬 더 잘리도록 함
+        const rectSize = s * 0.9;
+        const spacing = s * 1.0; // 간격 더 벌림 (0.8 -> 1.0)
+        const expand = s * 0.2;
+        
+        // 전체를 하나의 클리핑 영역으로 설정 (훨씬 더 작게 만들어 더 많이 잘리게)
+        ctx.save();
+        ctx.beginPath();
+        // 전체를 감싸는 원형 클리핑 영역 (훨씬 더 작게)
+        ctx.arc(x, y, spacing + rectSize/2 + expand * 0.2, 0, Math.PI * 2);
+        ctx.clip();
+        
+        // 4개 사각형을 그리기 (서로 겹치게)
+        ctx.beginPath();
+        
+        // 좌상 둥근 사각형
+        ctx.roundRect(
+          x - spacing - rectSize/2 - expand, 
+          y - spacing - rectSize/2 - expand, 
+          rectSize + expand * 2, 
+          rectSize + expand * 2, 
+          (rectSize + expand * 2) * 0.3
+        );
+        
+        // 우상 둥근 사각형
+        ctx.roundRect(
+          x + spacing - rectSize/2 - expand, 
+          y - spacing - rectSize/2 - expand, 
+          rectSize + expand * 2, 
+          rectSize + expand * 2, 
+          (rectSize + expand * 2) * 0.3
+        );
+        
+        // 좌하 둥근 사각형
+        ctx.roundRect(
+          x - spacing - rectSize/2 - expand, 
+          y + spacing - rectSize/2 - expand, 
+          rectSize + expand * 2, 
+          rectSize + expand * 2, 
+          (rectSize + expand * 2) * 0.3
+        );
+        
+        // 우하 둥근 사각형
+        ctx.roundRect(
+          x + spacing - rectSize/2 - expand, 
+          y + spacing - rectSize/2 - expand, 
+          rectSize + expand * 2, 
+          rectSize + expand * 2, 
+          (rectSize + expand * 2) * 0.3
+        );
+        
+        ctx.stroke();
+        ctx.restore();
+      };
 
-  // 전광판 프레임 하이라이트
-  ctx.strokeStyle = '#FFFFFF';
-  ctx.lineWidth = 2;
-  ctx.beginPath();
-  ctx.roundRect(displayX - 8, displayY - 8, displayW + 16, displayH + 16, 12);
-  ctx.stroke();
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+      
+      // 2. 메인 빨간색
+      ctx.shadowBlur = 0; // 그림자 제거 (깔끔하게)
+      ctx.strokeStyle = '#FF0000'; // 밝은 빨강
+      ctx.lineWidth = 5; // 테두리보다 얇게
+      drawVeinMark(ctx, markX, markY, size);
+      
+      // 카운트가 1일 때 반대쪽 이마에 빠직 마크 하나 더 추가
+      if (timerValue === 1) {
+        const secondMarkX = radius - radius * 0.45; // 반대쪽 (왼쪽)
+        const secondMarkY = radius - radius * 0.35; // 살짝 아래로 조절 (0.45 -> 0.35)
+        const secondSize = size * 0.8; // 약간 더 작게
+        drawVeinMark(ctx, secondMarkX, secondMarkY, secondSize);
+      }
+    }
+  }
 }
 
 // ...
