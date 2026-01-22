@@ -91,6 +91,7 @@ export default class MainScene extends Phaser.Scene {
 
     const bombBtn = this.add.container(bombBtnX, bombBtnY);
     bombBtn.setDepth(20);
+    bombBtn.setData('isBombButton', true); // 폭탄 버튼 식별자 추가
 
     // 버튼 배경
     const bombBtnBg = this.add.graphics();
@@ -134,12 +135,11 @@ export default class MainScene extends Phaser.Scene {
 
       // 폭탄 모드로 전환 및 드래그 시작
       if (this.isSwitchMode) {
-        // 스위치 모드일 때는 폭탄만 터트리기
-        // 모든 폭탄 즉시 폭발
+        // 스위치 모드일 때는 숫자가 1인 폭탄만 터트리기
         const bombsToExplodeNow = [];
         this.fruits.forEach(fruit => {
           const fConfig = this.fruitConfigs[fruit.level];
-          if (fConfig && fConfig.isBomb && fruit.bombTimer !== undefined && !fruit.isExploded) {
+          if (fConfig && fConfig.isBomb && fruit.bombTimer === 1 && !fruit.isExploded) {
             bombsToExplodeNow.push(fruit);
           }
         });
@@ -164,8 +164,10 @@ export default class MainScene extends Phaser.Scene {
       // 터치 위치로 포인터 즉시 업데이트
       this.lastPointerX = pointer.x;
       
-      // 미리보기 갱신
-      this.updatePreview(pointer.x, this.previewY);
+      // 미리보기 갱신 - 스위치 모드가 아닐 때만
+      if (!this.isSwitchMode) {
+        this.updatePreview(pointer.x, this.previewY);
+      }
       
       // 버튼 클릭 효과
       this.tweens.add({
@@ -280,10 +282,6 @@ export default class MainScene extends Phaser.Scene {
       if (currentlyOver.length > 0) return;
       
       if (this.canDrop) {
-        // 스위치 모드일 때는 일반 과일 드롭 막기
-        if (this.isSwitchMode) {
-          return;
-        }
         this.dropFruit();
         this.canDrop = false;
         this.dropCooldown = 500; // 0.5초
@@ -320,6 +318,24 @@ export default class MainScene extends Phaser.Scene {
         */
       });
     });
+  }
+
+  handleBombButtonInSwitchMode() {
+    // 스위치 모드일 때 숫자가 1인 폭탄만 터트리기
+    const bombsToExplodeNow = [];
+    this.fruits.forEach(fruit => {
+      const fConfig = this.fruitConfigs[fruit.level];
+      if (fConfig && fConfig.isBomb && fruit.bombTimer === 1 && !fruit.isExploded) {
+        bombsToExplodeNow.push(fruit);
+      }
+    });
+    
+    bombsToExplodeNow.forEach(bomb => {
+      bomb.isExploded = true;
+      this.explodeBomb(bomb);
+    });
+    
+    this.isSwitchMode = false; // 스위치 모드 비활성화
   }
 
   explodeBomb(bomb) {
@@ -515,6 +531,14 @@ export default class MainScene extends Phaser.Scene {
     if (config.isBomb) {
       // 폭탄 타이머 설정 - 미리보기 숫자를 그대로 사용
       fruit.bombTimer = this.previewNumber; // 미리보기 숫자를 그대로 타이머로 사용
+      
+      // 폭탄 숫자가 1이면 스위치 모드 활성화
+      if (fruit.bombTimer === 1) {
+        this.isSwitchMode = true;
+        // 즉시 미리보기 업데이트
+        this.updatePreview(this.previewX, this.previewY);
+      }
+      
       textContent = `${fruit.bombTimer}`; // '3' 형식 (단일 숫자)
       
       textStyle = {
@@ -562,6 +586,8 @@ export default class MainScene extends Phaser.Scene {
         // 폭탄 숫자 1일 때 스위치 모드 활성화
         if (existingFruit.bombTimer === 1) {
           this.isSwitchMode = true;
+          // 즉시 미리보기 업데이트
+          this.updatePreview(this.previewX, this.previewY);
         }
         
         // 0이 되면 폭발 대기
@@ -587,8 +613,11 @@ export default class MainScene extends Phaser.Scene {
     this.previewText.setVisible(false);
 
     // 새로운 미리보기 과일 생성 (범위에서 랜덤하게 선택)
-    this.previewLevel = Phaser.Math.Between(this.minDropLevel, this.maxDropLevel);
-    this.previewNumber = this.getRandomNumberForLevel(this.previewLevel);
+    // 스위치 모드가 아닐 때만 다음 과일 생성
+    if (!this.isSwitchMode) {
+      this.previewLevel = Phaser.Math.Between(this.minDropLevel, this.maxDropLevel);
+      this.previewNumber = this.getRandomNumberForLevel(this.previewLevel);
+    }
 
     // 0.5초 후에 미리보기 과일 다시 표시
     this.time.delayedCall(500, () => {
@@ -1316,16 +1345,14 @@ export default class MainScene extends Phaser.Scene {
 
     // 스위치 모드일 때 미리보기 변경
     if (this.isSwitchMode) {
-      textContent = 'SWITCH';
+      // 텍스트를 표시하지 않음 (핵폭탄 버튼만 표시)
+      textContent = '';
       textStyle = {
-        fontSize: '24px',
-        color: '#ff6600',
-        fontFamily: 'Arial Black',
+        fontSize: '1px',
+        color: 'transparent',
+        fontFamily: 'Arial',
         fontWeight: 'bold',
-        align: 'center',
-        stroke: '#cc3300',
-        strokeThickness: 4,
-        shadow: { color: '#ff6600', blur: 8, fill: true, stroke: true }
+        align: 'center'
       };
     }
 
@@ -1345,25 +1372,110 @@ export default class MainScene extends Phaser.Scene {
 
     // 스위치 모드일 때는 과일 모습 숨기기
     if (this.isSwitchMode) {
-      if (this.previewSprite && this.previewSprite.active) {
-        this.previewSprite.setVisible(false);
+      if (this.previewSprite) {
+        this.previewSprite.destroy(); // 완전히 제거
+        this.previewSprite = null;
       }
       
-      // 스위치 모양 그리기
+      // 폭탄 버튼 디자인 (정사각형 바닥 - 더 작은 사이즈)
       this.previewGraphics.clear();
-      this.previewGraphics.lineStyle(4, 0xff6600, 1);
-      this.previewGraphics.fillStyle(0xff6600, 0.8);
       
-      // 스위치 배경
-      this.previewGraphics.fillRoundedRect(mouseX - 40, mouseY - 20, 80, 40, 10);
-      this.previewGraphics.strokeRoundedRect(mouseX - 40, mouseY - 20, 80, 40, 10);
+      // 정사각형 바닥 (회색) - 더 작게
+      const baseSize = 60;
+      const baseX = mouseX - baseSize / 2;
+      const baseY = mouseY - baseSize / 2;
       
-      // 스위치 버튼
-      this.previewGraphics.fillCircle(mouseX - 20, mouseY, 15);
-      this.previewGraphics.strokeCircle(mouseX - 20, mouseY, 15);
+      // 바닥 그림자
+      this.previewGraphics.fillStyle(0x000000, 0.3);
+      this.previewGraphics.fillRoundedRect(baseX + 2, baseY + 2, baseSize, baseSize, 6);
+      
+      // 바닥 본체
+      this.previewGraphics.fillStyle(0xbdc3c7, 1);
+      this.previewGraphics.fillRoundedRect(baseX, baseY, baseSize, baseSize, 6);
+      
+      // 바닥 테두리
+      this.previewGraphics.lineStyle(2, 0x95a5a6, 1);
+      this.previewGraphics.strokeRoundedRect(baseX, baseY, baseSize, baseSize, 6);
+      
+      // 바닥 금속 질감 (그리드 선들) - 더 적은 선
+      for (let i = 0; i < 4; i++) {
+        // 가로 선
+        const lineY = baseY + 10 + i * 10;
+        this.previewGraphics.lineStyle(1, 0x95a5a6, 0.3);
+        this.previewGraphics.beginPath();
+        this.previewGraphics.moveTo(baseX + 6, lineY);
+        this.previewGraphics.lineTo(baseX + baseSize - 6, lineY);
+        this.previewGraphics.strokePath();
+        
+        // 세로 선
+        const lineX = baseX + 10 + i * 10;
+        this.previewGraphics.beginPath();
+        this.previewGraphics.moveTo(lineX, baseY + 6);
+        this.previewGraphics.lineTo(lineX, baseY + baseSize - 6);
+        this.previewGraphics.strokePath();
+      }
+      
+      // 버튼 그림자 (빨간색 폭탄 그림자) - 더 작게
+      this.previewGraphics.fillStyle(0x990000, 1);
+      this.previewGraphics.fillEllipse(mouseX, mouseY + 2, 35, 35);
+      
+      // 버튼 본체 (빨간색 폭탄) - 더 작게
+      this.previewGraphics.fillStyle(0xe74c3c, 1);
+      this.previewGraphics.fillEllipse(mouseX, mouseY, 35, 35);
+      
+      // 버튼 테두리 (어두운 빨간색)
+      this.previewGraphics.lineStyle(2, 0xc0392b, 1);
+      this.previewGraphics.strokeEllipse(mouseX, mouseY, 35, 35);
+      
+      // 이너 글로우 (하단부 어두운 영역) - 더 작게
+      this.previewGraphics.fillStyle(0x990000, 0.6);
+      this.previewGraphics.fillEllipse(mouseX, mouseY + 8, 30, 25);
+      
+      // 추가 하이라이트 (작은 반사광들) - 더 작게
+      const highlights = [
+        {x: -12, y: -4, size: 6, alpha: 0.4},
+        {x: 8, y: -8, size: 4, alpha: 0.5},
+        {x: -6, y: 10, size: 3, alpha: 0.3},
+        {x: 12, y: 4, size: 4, alpha: 0.4}
+      ];
+      
+      highlights.forEach(h => {
+        this.previewGraphics.fillStyle(0xFFFFFF, h.alpha);
+        this.previewGraphics.fillEllipse(mouseX + h.x, mouseY + h.y, h.size, h.size);
+      });
+      
+      // "BOOM" 텍스트 - 기존 객체 재사용
+      if (!this.boomText) {
+        this.boomText = this.add.text(mouseX, mouseY, 'BOOM', {
+          fontSize: '14px',
+          color: '#FFFFFF',
+          fontFamily: 'Arial Black',
+          fontWeight: '900',
+          align: 'center',
+          stroke: 'rgba(0, 0, 0, 0.2)',
+          strokeThickness: 1
+        }).setOrigin(0.5);
+        
+        // 텍스트 그림자 효과
+        this.boomText.setShadow(1, 1, 'rgba(0, 0, 0, 0.2)', 3);
+      }
+      
+      // 텍스트 위치 업데이트
+      this.boomText.setPosition(mouseX, mouseY);
+      this.boomText.setVisible(true);
+      this.boomText.setAlpha(alpha);
+      
+      // 외부 광택 효과 - 더 작게
+      this.previewGraphics.fillStyle(0xFFFFFF, 0.1);
+      this.previewGraphics.fillEllipse(mouseX, mouseY, 40, 40);
       
       this.previewGraphics.setAlpha(alpha);
     } else {
+      // 스위치 모드가 아닐 때는 BOOM 텍스트 숨기기
+      if (this.boomText) {
+        this.boomText.setVisible(false);
+      }
+      
       if (!this.previewSprite || !this.previewSprite.active || !this.previewSprite.scene) {
         this.previewSprite = this.add.sprite(mouseX, mouseY, textureKey);
         this.previewSprite.setOrigin(0.5, 0.5);
@@ -1373,8 +1485,9 @@ export default class MainScene extends Phaser.Scene {
         // 기존 스프라이트 업데이트
         this.previewSprite.setTexture(textureKey);
         this.previewSprite.setPosition(mouseX, mouseY);
-        this.previewSprite.setVisible(true);
       }
+      
+      this.previewSprite.setVisible(true);
       
       // 폭탄 과일 스케일 보정 (MainScene.js dropFruit 참조)
       if (fruitConfig.isBomb) {
