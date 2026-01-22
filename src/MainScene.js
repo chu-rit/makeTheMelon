@@ -133,6 +133,26 @@ export default class MainScene extends Phaser.Scene {
       if (this.isDraggingBomb) return;
 
       // 폭탄 모드로 전환 및 드래그 시작
+      if (this.isSwitchMode) {
+        // 스위치 모드일 때는 폭탄만 터트리기
+        // 모든 폭탄 즉시 폭발
+        const bombsToExplodeNow = [];
+        this.fruits.forEach(fruit => {
+          const fConfig = this.fruitConfigs[fruit.level];
+          if (fConfig && fConfig.isBomb && fruit.bombTimer !== undefined && !fruit.isExploded) {
+            bombsToExplodeNow.push(fruit);
+          }
+        });
+        
+        bombsToExplodeNow.forEach(bomb => {
+          bomb.isExploded = true;
+          this.explodeBomb(bomb);
+        });
+        
+        this.isSwitchMode = false; // 스위치 모드 비활성화
+        return;
+      }
+      
       this.isDraggingBomb = true;
       // 현재 미리보기 숫자를 폭탄 타이머 초기값으로 가져옴
       this.bombInitialCount = this.previewNumber;
@@ -216,6 +236,7 @@ export default class MainScene extends Phaser.Scene {
     this.dropCooldown = 0;
     this.mergeCooldown = 0; // 합치기 쿨다운
     this.isDraggingBomb = false; // 폭탄 버튼을 눌러서 드래그 중인지 확인
+    this.isSwitchMode = false; // 스위치 모드 (폭탄 숫자 1일 때 활성화)
 
     // 초기값 설정
     this.lastPointerX = this.scale.width / 2;
@@ -259,6 +280,10 @@ export default class MainScene extends Phaser.Scene {
       if (currentlyOver.length > 0) return;
       
       if (this.canDrop) {
+        // 스위치 모드일 때는 일반 과일 드롭 막기
+        if (this.isSwitchMode) {
+          return;
+        }
         this.dropFruit();
         this.canDrop = false;
         this.dropCooldown = 500; // 0.5초
@@ -534,6 +559,11 @@ export default class MainScene extends Phaser.Scene {
           existingFruit.setTexture(`fruit_bomb_${existingFruit.bombTimer}`);
         }
         
+        // 폭탄 숫자 1일 때 스위치 모드 활성화
+        if (existingFruit.bombTimer === 1) {
+          this.isSwitchMode = true;
+        }
+        
         // 0이 되면 폭발 대기
         if (existingFruit.bombTimer <= 0) {
           bombsToExplode.push(existingFruit);
@@ -546,6 +576,8 @@ export default class MainScene extends Phaser.Scene {
     bombsToExplode.forEach(bomb => {
       bomb.isExploded = true;
       this.explodeBomb(bomb);
+      // 폭탄이 폭발하면 스위치 모드 비활성화
+      this.isSwitchMode = false;
     });
 
     // 미리보기 과일 숨기기
@@ -560,10 +592,19 @@ export default class MainScene extends Phaser.Scene {
 
     // 0.5초 후에 미리보기 과일 다시 표시
     this.time.delayedCall(500, () => {
-      if (this.previewSprite) {
-        this.previewSprite.setVisible(true);
-      }
-      this.previewText.setVisible(true);
+      // 쿨다운이 끝날 때까지 기다렸다가 표시
+      const showPreview = () => {
+        if (this.canDrop) {
+          if (this.previewSprite) {
+            this.previewSprite.setVisible(true);
+          }
+          this.previewText.setVisible(true);
+        } else {
+          // 아직 쿨다운 중이면 100ms 후 다시 확인
+          this.time.delayedCall(100, showPreview);
+        }
+      };
+      showPreview();
     });
   }
 
@@ -661,7 +702,7 @@ export default class MainScene extends Phaser.Scene {
       }
     } else {
       this.previewGraphics.clear();
-      this.previewText.setText('');
+      this.previewText.setVisible(false); // 텍스트를 지우지 않고 숨기기만 함
     }
 
     // 떨어진 과일의 텍스트 위치 동기화
@@ -1248,35 +1289,7 @@ export default class MainScene extends Phaser.Scene {
       alpha = 0.5; // 투명도 처리
     }
 
-    // 스프라이트 기반 미리보기 (텍스처 사용)
-    // sprite.scene이 없으면 destroyed된 상태이므로 새로 생성해야 함
-    let textureKey = `fruit_${this.previewLevel}`;
-    if (fruitConfig.isBomb) {
-      textureKey = `fruit_bomb_${this.previewNumber}`;
-    }
-
-    if (!this.previewSprite || !this.previewSprite.active || !this.previewSprite.scene) {
-      this.previewSprite = this.add.sprite(mouseX, mouseY, textureKey);
-      this.previewSprite.setOrigin(0.5, 0.5);
-      this.previewSprite.setDepth(5);
-      this.previewSpriteRotation = 0;
-    } else {
-      // 기존 스프라이트 업데이트
-      this.previewSprite.setTexture(textureKey);
-      this.previewSprite.setPosition(mouseX, mouseY);
-    }
-    
-    // 폭탄 과일 스케일 보정 (MainScene.js dropFruit 참조)
-    if (fruitConfig.isBomb) {
-      this.previewSprite.setScale(radius / 142.5);
-    } else {
-      this.previewSprite.setScale(radius / 170);
-    }
-
-    this.previewSprite.setAlpha(alpha);
-    this.previewSprite.setRotation(0);
-
-    // 숫자 텍스트 업데이트
+    // 숫자 텍스트 업데이트 (과일과 같은 순간에 등장하도록 먼저 처리)
     let textContent = this.previewNumber.toString();
     let textStyle = {
       fontSize: '30px',
@@ -1301,9 +1314,80 @@ export default class MainScene extends Phaser.Scene {
       };
     }
 
+    // 스위치 모드일 때 미리보기 변경
+    if (this.isSwitchMode) {
+      textContent = 'SWITCH';
+      textStyle = {
+        fontSize: '24px',
+        color: '#ff6600',
+        fontFamily: 'Arial Black',
+        fontWeight: 'bold',
+        align: 'center',
+        stroke: '#cc3300',
+        strokeThickness: 4,
+        shadow: { color: '#ff6600', blur: 8, fill: true, stroke: true }
+      };
+    }
+
+    // 텍스트 업데이트 (스프라이트보다 먼저 처리하여 동시에 나타나도록)
     this.previewText.setText(textContent);
     this.previewText.setStyle(textStyle);
     this.previewText.setPosition(mouseX, mouseY);
     this.previewText.setAlpha(alpha);
+    this.previewText.setVisible(true); // 항상 텍스트를 보이도록 설정
+
+    // 스프라이트 기반 미리보기 (텍스처 사용)
+    // sprite.scene이 없으면 destroyed된 상태이므로 새로 생성해야 함
+    let textureKey = `fruit_${this.previewLevel}`;
+    if (fruitConfig.isBomb) {
+      textureKey = `fruit_bomb_${this.previewNumber}`;
+    }
+
+    // 스위치 모드일 때는 과일 모습 숨기기
+    if (this.isSwitchMode) {
+      if (this.previewSprite && this.previewSprite.active) {
+        this.previewSprite.setVisible(false);
+      }
+      
+      // 스위치 모양 그리기
+      this.previewGraphics.clear();
+      this.previewGraphics.lineStyle(4, 0xff6600, 1);
+      this.previewGraphics.fillStyle(0xff6600, 0.8);
+      
+      // 스위치 배경
+      this.previewGraphics.fillRoundedRect(mouseX - 40, mouseY - 20, 80, 40, 10);
+      this.previewGraphics.strokeRoundedRect(mouseX - 40, mouseY - 20, 80, 40, 10);
+      
+      // 스위치 버튼
+      this.previewGraphics.fillCircle(mouseX - 20, mouseY, 15);
+      this.previewGraphics.strokeCircle(mouseX - 20, mouseY, 15);
+      
+      this.previewGraphics.setAlpha(alpha);
+    } else {
+      if (!this.previewSprite || !this.previewSprite.active || !this.previewSprite.scene) {
+        this.previewSprite = this.add.sprite(mouseX, mouseY, textureKey);
+        this.previewSprite.setOrigin(0.5, 0.5);
+        this.previewSprite.setDepth(5);
+        this.previewSpriteRotation = 0;
+      } else {
+        // 기존 스프라이트 업데이트
+        this.previewSprite.setTexture(textureKey);
+        this.previewSprite.setPosition(mouseX, mouseY);
+        this.previewSprite.setVisible(true);
+      }
+      
+      // 폭탄 과일 스케일 보정 (MainScene.js dropFruit 참조)
+      if (fruitConfig.isBomb) {
+        this.previewSprite.setScale(radius / 142.5);
+      } else {
+        this.previewSprite.setScale(radius / 170);
+      }
+
+      this.previewSprite.setAlpha(alpha);
+      this.previewSprite.setRotation(0);
+      
+      // 스위치 모드가 아닐 때는 그래픽 지우기
+      this.previewGraphics.clear();
+    }
   }
 }
