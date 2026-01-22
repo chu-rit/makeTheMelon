@@ -100,8 +100,8 @@ export default class MainScene extends Phaser.Scene {
     bombBtnBg.strokeCircle(0, 0, bombBtnRadius);
     bombBtn.add(bombBtnBg);
 
-    // 폭탄 아이콘 (타이머 1일 때의 폭탄 텍스처 사용)
-    const bombIcon = this.add.sprite(0, 0, 'fruit_bomb_1');
+    // 폭탄 아이콘 (최대숫자 9일 때의 폭탄 텍스처 사용)
+    const bombIcon = this.add.sprite(0, 0, 'fruit_bomb_9');
     bombIcon.setScale(0.3); // 아이콘 크기
     bombBtn.add(bombIcon);
 
@@ -303,7 +303,7 @@ export default class MainScene extends Phaser.Scene {
     const x = bomb.x;
     const y = bomb.y;
     const blastRadius = 800; // 화면 전체 커버
-    const blastPower = 0.5; // 폭발 힘 최소화 (1.5 -> 0.5)
+    const blastPower = 0.35; // 폭발 힘 적절하게 조절 (0.2 -> 0.35)
 
     // 이펙트
     this.createExplosionEffect(x, y);
@@ -335,7 +335,7 @@ export default class MainScene extends Phaser.Scene {
 
         // 위로 튀어오르는 힘 억제 (상향 벡터 감쇠)
         if (dirY < 0) {
-          dirY *= 0.1; // 위로 향하는 힘을 10%로 줄임 (거의 뜨지 않음)
+          dirY *= 0.03; // 위로 향하는 힘을 3%로 줄임 (8% -> 3%)
         }
         
         // Matter.js 힘 적용

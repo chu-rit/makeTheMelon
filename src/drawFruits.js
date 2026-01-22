@@ -104,7 +104,7 @@ function drawAngryFace(ctx, x, y, radius, angerLevel = 0) {
   
   // 1. 눈 (눈썹에 눌린 반달 눈)
   const eyeOffset = radius * 0.35; 
-  const eyeY = y - radius * 0.05;
+  const eyeY = y + radius * 0.00; // 눈을 훨씬 더 아래로 이동 (0.15 -> 0.25)
   const eyeSize = radius * 0.25;
   
   // 레벨 0일 땐 회전 없음(동그란 눈), 레벨 1일 땐 0.6라디안(날카로운 눈)
@@ -138,23 +138,24 @@ function drawAngryFace(ctx, x, y, radius, angerLevel = 0) {
   ctx.lineJoin = 'round';
   ctx.beginPath();
   
-  // 미간 간격: 평온할 땐 넓고(1.3), 화날 땐 좁음(0.3)
-  const browGap = eyeSize * (1.3 - angerLevel * 1.0); 
+  // 미간 간격: 평온할 땐 넓고(1.8), 화날 땐 좁음(0.3) - 1단계에서 눈썹이 합쳐지지 않도록 간격 더 증가
+  const browGap = eyeSize * (1.8 - angerLevel * 1.5); 
   
   // 눈썹 중심 높이: 평온할 땐 눈 위(-0.5), 화날 땐 눈 아래로 덮침(0.5)
-  // eyeSize 기준 상대 좌표 사용
+  // eyeSize 기준 상대 좌표 사용 - 눈썹은 원래 위치(y 기준) 유지
+  const browBaseY = y - radius * 0.05; // 눈썹은 원래 위치 유지
   const browCenterYOffset = -0.5 + (angerLevel * 1.0); 
   const browOuterYOffset = -0.5 - (angerLevel * 0.3); // 바깥쪽은 화날수록 살짝 올라감(치켜뜸)
 
   // 왼쪽 눈썹
   // 바깥 -> 안쪽
-  ctx.moveTo(x - eyeOffset - eyeSize * 1.0, eyeY + eyeSize * browOuterYOffset);
-  ctx.lineTo(x - browGap * 0.5, eyeY + eyeSize * browCenterYOffset);
+  ctx.moveTo(x - eyeOffset - eyeSize * 1.0, browBaseY + eyeSize * browOuterYOffset);
+  ctx.lineTo(x - browGap * 0.5, browBaseY + eyeSize * browCenterYOffset);
   
   // 오른쪽 눈썹
   // 안쪽 -> 바깥
-  ctx.moveTo(x + browGap * 0.5, eyeY + eyeSize * browCenterYOffset);
-  ctx.lineTo(x + eyeOffset + eyeSize * 1.0, eyeY + eyeSize * browOuterYOffset);
+  ctx.moveTo(x + browGap * 0.5, browBaseY + eyeSize * browCenterYOffset);
+  ctx.lineTo(x + eyeOffset + eyeSize * 1.0, browBaseY + eyeSize * browOuterYOffset);
   
   ctx.stroke();
 
@@ -175,9 +176,7 @@ function drawAngryFace(ctx, x, y, radius, angerLevel = 0) {
     ctx.moveTo(x - mouthW, mouthY + mouthCurve);
     ctx.quadraticCurveTo(x, mouthY - mouthCurve, x + mouthW, mouthY + mouthCurve);
   }
-  ctx.stroke();
-  
-  // 4. 홍조 없음
+  ctx.stroke();  
 }
 
 function drawCherry(canvas, size) {
