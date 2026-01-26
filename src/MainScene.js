@@ -84,100 +84,32 @@ export default class MainScene extends Phaser.Scene {
       fontWeight: 'bold'
     });
 
-    // 4. 폭탄 버튼 (우측 상단)
-    const bombBtnX = width - 60;
-    const bombBtnY = 60;
-    const bombBtnRadius = 35;
+    // 4. 인벤토리 영역 (우측 상단)
+    const inventoryX = width - 80;
+    const inventoryY = 60;
+    const inventoryWidth = 120;
+    const inventoryHeight = 100;
+    const inventoryRadius = 15; // 둥근 모서리 반지름
 
-    const bombBtn = this.add.container(bombBtnX, bombBtnY);
-    bombBtn.setDepth(20);
-    bombBtn.setData('isBombButton', true); // 폭탄 버튼 식별자 추가
+    const inventoryBg = this.add.graphics();
+    inventoryBg.fillStyle(0xf0f0f0, 0.9); // 연한 회색 배경
+    inventoryBg.lineStyle(3, 0x888888, 1); // 회색 테두리
+    inventoryBg.fillRoundedRect(inventoryX - inventoryWidth/2, inventoryY - inventoryHeight/2, inventoryWidth, inventoryHeight, inventoryRadius);
+    inventoryBg.strokeRoundedRect(inventoryX - inventoryWidth/2, inventoryY - inventoryHeight/2, inventoryWidth, inventoryHeight, inventoryRadius);
+    inventoryBg.setDepth(10); // UI 깊이 설정
 
-    // 버튼 배경
-    const bombBtnBg = this.add.graphics();
-    bombBtnBg.fillStyle(0x333333, 0.8);
-    bombBtnBg.fillCircle(0, 0, bombBtnRadius);
-    bombBtnBg.lineStyle(3, 0xffd700, 1); // 금색 테두리
-    bombBtnBg.strokeCircle(0, 0, bombBtnRadius);
-    bombBtn.add(bombBtnBg);
-
-    // 폭탄 아이콘 (최대숫자 9일 때의 폭탄 텍스처 사용)
-    const bombIcon = this.add.sprite(0, 0, 'fruit_bomb_9');
-    bombIcon.setScale(0.3); // 아이콘 크기
-    bombBtn.add(bombIcon);
-
-    // 버튼 라벨 (BOMB)
-    const bombLabel = this.add.text(0, 45, 'BOMB', {
-      fontSize: '14px',
-      color: '#333333',
+    // 인벤토리 라벨
+    const inventoryLabel = this.add.text(inventoryX, inventoryY - inventoryHeight/2 + 20, 'INVENTORY', {
+      fontSize: '12px',
+      color: '#666666',
       fontFamily: 'Arial',
       fontWeight: 'bold'
     }).setOrigin(0.5);
-    bombBtn.add(bombLabel);
+    inventoryLabel.setDepth(11);
 
-    // 인터랙션
-    // Zone을 원형으로 설정하여 터치 영역을 더 정확하게 만듦
-    const bombBtnZone = this.add.zone(0, 0, bombBtnRadius * 2, bombBtnRadius * 2)
-      .setInteractive(new Phaser.Geom.Circle(bombBtnRadius, bombBtnRadius, bombBtnRadius * 1.2), Phaser.Geom.Circle.Contains); // 터치 영역 1.2배 확대
-    bombBtn.add(bombBtnZone);
-
-    bombBtnZone.on('pointerdown', (pointer, localX, localY, event) => {
-      // 이벤트 전파 방지
-      if (event && event.stopPropagation) {
-        event.stopPropagation();
-      }
-
-      // 게임오버 상태거나 드롭 불가능할 때 무시
-      if (this.isGameOver || this.gameOverWarning || !this.canDrop) return;
-
-      // 이미 폭탄 모드라면 무시 (중복 클릭 방지)
-      if (this.isDraggingBomb) return;
-
-      // 폭탄 모드로 전환 및 드래그 시작
-      if (this.isSwitchMode) {
-        // 스위치 모드일 때는 숫자가 1인 폭탄만 터트리기
-        const bombsToExplodeNow = [];
-        this.fruits.forEach(fruit => {
-          const fConfig = this.fruitConfigs[fruit.level];
-          if (fConfig && fConfig.isBomb && fruit.bombTimer === 1 && !fruit.isExploded) {
-            bombsToExplodeNow.push(fruit);
-          }
-        });
-        
-        bombsToExplodeNow.forEach(bomb => {
-          bomb.isExploded = true;
-          this.explodeBomb(bomb);
-        });
-        
-        this.isSwitchMode = false; // 스위치 모드 비활성화
-        return;
-      }
-      
-      this.isDraggingBomb = true;
-      // 현재 미리보기 숫자를 폭탄 타이머 초기값으로 가져옴
-      this.bombInitialCount = this.previewNumber;
-      // 폭탄은 배열의 마지막 요소
-      const bombLevel = this.fruitConfigs.length - 1;
-      this.previewLevel = bombLevel;
-      // previewNumber는 그대로 유지 (미리보기 숫자와 떨어트리는 숫자를 일치시키기 위해)
-      
-      // 터치 위치로 포인터 즉시 업데이트
-      this.lastPointerX = pointer.x;
-      
-      // 미리보기 갱신 - 스위치 모드가 아닐 때만
-      if (!this.isSwitchMode) {
-        this.updatePreview(pointer.x, this.previewY);
-      }
-      
-      // 버튼 클릭 효과
-      this.tweens.add({
-        targets: bombBtn,
-        scaleX: 0.9,
-        scaleY: 0.9,
-        duration: 100,
-        yoyo: true
-      });
-    });
+    // 폭탄 버튼 저장소
+    this.bombButtons = [];
+    this.createdLevels = new Set(); // 생성된 레벨 추적
 
     // 게임오버 선 표시 (미리보기 과일 아래)
     // 미리보기 과일 중심: y=100, 레벨 1 반지름=50 → 게임오버 라인 y=150
@@ -300,6 +232,18 @@ export default class MainScene extends Phaser.Scene {
         const fruitA = bodyA.gameObject;
         const fruitB = bodyB.gameObject;
 
+        // 큰 충돌 감지 (속도 기반)
+        const relativeVelocity = Math.sqrt(
+          Math.pow(bodyA.velocity.x - bodyB.velocity.x, 2) + 
+          Math.pow(bodyA.velocity.y - bodyB.velocity.y, 2)
+        );
+
+        // 큰 충돌 시 무서운 표정 표시
+        if (relativeVelocity > 15) { // 충돌 강도 임계값을 5에서 15로 상향 조정
+          if (fruitA.active) this.showScaredFace(fruitA, 500);
+          if (fruitB.active) this.showScaredFace(fruitB, 500);
+        }
+
         // 둘 중 하나가 폭탄인지 확인 (벽이나 바닥과 부딪혀도 폭발)
         const isBombA = fruitA.level !== undefined && this.fruitConfigs[fruitA.level] && this.fruitConfigs[fruitA.level].isBomb;
         const isBombB = fruitB.level !== undefined && this.fruitConfigs[fruitB.level] && this.fruitConfigs[fruitB.level].isBomb;
@@ -316,6 +260,202 @@ export default class MainScene extends Phaser.Scene {
           this.explodeBomb(fruitB);
         }
         */
+      });
+    });
+  }
+
+  checkLevelCreation(newLevel) {
+    // 레벨 4부터 새로운 레벨이 처음 생성되었을 때 폭탄 버튼 1개만 생성
+    if (newLevel >= 4 && !this.createdLevels.has(newLevel)) {
+      this.createdLevels.add(newLevel);
+      this.createBombButton();
+    }
+  }
+
+  createBombButton() {
+    const inventoryX = this.scale.width - 80;
+    const inventoryY = 60;
+    const bombIndex = this.bombButtons.length + 1;
+    
+    // 폭탄 버튼 위치 계산 (인벤토리 내에서)
+    const bombX = inventoryX - 30 + (bombIndex - 1) * 25;
+    const bombY = inventoryY + 10;
+    const bombRadius = 15;
+
+    const bombBtn = this.add.container(bombX, bombY);
+    bombBtn.setDepth(15);
+    bombBtn.setData('isBombButton', true);
+
+    // 버튼 배경
+    const bombBtnBg = this.add.graphics();
+    bombBtnBg.fillStyle(0x333333, 0.8);
+    bombBtnBg.fillCircle(0, 0, bombRadius);
+    bombBtnBg.lineStyle(2, 0xffd700, 1); // 금색 테두리
+    bombBtnBg.strokeCircle(0, 0, bombRadius);
+    bombBtn.add(bombBtnBg);
+
+    // 폭탄 아이콘
+    const bombIcon = this.add.sprite(0, 0, 'fruit_bomb_9');
+    bombIcon.setScale(0.15); // 작은 아이콘 크기
+    bombBtn.add(bombIcon);
+
+    // 인터랙션
+    const bombBtnZone = this.add.zone(0, 0, bombRadius * 2, bombRadius * 2)
+      .setInteractive(new Phaser.Geom.Circle(bombRadius, bombRadius, bombRadius * 1.2), Phaser.Geom.Circle.Contains);
+    bombBtn.add(bombBtnZone);
+
+    bombBtnZone.on('pointerdown', (pointer, localX, localY, event) => {
+      if (event && event.stopPropagation) {
+        event.stopPropagation();
+      }
+
+      if (this.isGameOver || this.gameOverWarning || !this.canDrop) return;
+      if (this.isDraggingBomb) return;
+
+      // 폭탄 모드로 전환
+      this.isDraggingBomb = true;
+      this.bombInitialCount = this.previewNumber;
+      const bombLevel = this.fruitConfigs.length - 1;
+      this.previewLevel = bombLevel;
+      
+      this.lastPointerX = pointer.x;
+      if (!this.isSwitchMode) {
+        this.updatePreview(pointer.x, this.previewY);
+      }
+
+      // 버튼 클릭 효과
+      this.tweens.add({
+        targets: bombBtn,
+        scaleX: 0.9,
+        scaleY: 0.9,
+        duration: 100,
+        yoyo: true,
+        ease: 'Power2'
+      });
+
+      // 폭탄 버튼 제거 예약 (사용 후)
+      this.time.delayedCall(100, () => {
+        this.removeBombButton(bombBtn);
+      });
+    });
+
+    bombBtnZone.on('pointerup', () => {
+      if (this.isDraggingBomb) {
+        this.isDraggingBomb = false;
+        this.previewLevel = this.currentFruitLevel;
+        this.updatePreview(this.lastPointerX, this.previewY);
+      }
+    });
+
+    bombBtnZone.on('pointermove', (pointer) => {
+      if (this.isDraggingBomb) {
+        this.lastPointerX = pointer.x;
+        this.updatePreview(pointer.x, this.previewY);
+      }
+    });
+
+    this.bombButtons.push(bombBtn);
+
+    // 폭탄 생성 이펙트
+    this.createBombAppearEffect(bombX, bombY);
+  }
+
+  createBombAppearEffect(x, y) {
+    // 1. 반짝임 효과 (깊이 증가)
+    const flash = this.add.circle(x, y, 40, 0xffd700, 0.8); // 크기와 불투명도 증가
+    flash.setDepth(50); // 깊이를 높여서 다른 요소들 앞으로 보이도록
+    
+    this.tweens.add({
+      targets: flash,
+      scale: { from: 0, to: 3 }, // 더 크게 확대
+      alpha: { from: 0.8, to: 0 },
+      duration: 500,
+      ease: 'Power2',
+      onComplete: () => flash.destroy()
+    });
+
+    // 2. 나타나는 텍스트 (깊이 증가)
+    const appearText = this.add.text(x, y, '+1', {
+      fontSize: '32px', // 폰트 크기 증가
+      color: '#ff6b35',
+      fontFamily: 'Arial Black',
+      fontWeight: 'bold',
+      stroke: '#ffffff',
+      strokeThickness: 4
+    }).setOrigin(0.5);
+    appearText.setDepth(51); // 깊이 증가
+
+    this.tweens.add({
+      targets: appearText,
+      scale: { from: 0.5, to: 2 }, // 더 크게 확대
+      alpha: { from: 0, to: 1, to: 0 },
+      y: y - 30, // 더 위로 이동
+      duration: 800,
+      ease: 'Back.easeOut',
+      onComplete: () => appearText.destroy()
+    });
+
+    // 3. 작은 입자 효과 (깊이 증가)
+    const sparkleCount = 12; // 입자 수 증가
+    for (let i = 0; i < sparkleCount; i++) {
+      const angle = (Math.PI * 2 * i) / sparkleCount;
+      const distance = 60; // 더 멀리 튀어나감
+      const sparkleX = x + Math.cos(angle) * distance;
+      const sparkleY = y + Math.sin(angle) * distance;
+      
+      const sparkle = this.add.circle(sparkleX, sparkleY, 4, 0xffffff, 1);
+      sparkle.setDepth(52); // 깊이 증가
+      
+      this.tweens.add({
+        targets: sparkle,
+        scale: { from: 0, to: 1.5 },
+        alpha: { from: 1, to: 0 },
+        duration: 400 + Math.random() * 300,
+        ease: 'Power2',
+        onComplete: () => sparkle.destroy()
+      });
+    }
+  }
+
+  removeBombButton(bombBtn) {
+    // 폭탄 버튼 제거
+    const index = this.bombButtons.indexOf(bombBtn);
+    if (index > -1) {
+      this.bombButtons.splice(index, 1);
+    }
+    
+    // 애니메이션으로 부드럽게 제거
+    this.tweens.add({
+      targets: bombBtn,
+      scaleX: 0,
+      scaleY: 0,
+      alpha: 0,
+      duration: 300,
+      ease: 'Power2',
+      onComplete: () => {
+        bombBtn.destroy();
+        
+        // 남은 폭탄 버튼들 위치 재정렬
+        this.rearrangeBombButtons();
+      }
+    });
+  }
+
+  rearrangeBombButtons() {
+    const inventoryX = this.scale.width - 80;
+    const inventoryY = 60;
+    
+    // 남은 폭탄 버튼들 위치 재정렬
+    this.bombButtons.forEach((bombBtn, index) => {
+      const bombX = inventoryX - 30 + index * 25;
+      const bombY = inventoryY + 10;
+      
+      this.tweens.add({
+        targets: bombBtn,
+        x: bombX,
+        y: bombY,
+        duration: 200,
+        ease: 'Power2'
       });
     });
   }
@@ -501,6 +641,11 @@ export default class MainScene extends Phaser.Scene {
     // 중력 강화 (가속도 빠르게)
     fruit.body.gravityScale = 3;
 
+    // 떨어질 때 무서운 표정 표시 (약간 지연)
+    this.time.delayedCall(100, () => {
+      this.showScaredFace(fruit, 2000); // 2초 동안 무서운 표정으로 증가
+    });
+
     // 과일 정보 저장
     fruit.radius = radius;
     fruit.level = dropLevel;
@@ -508,6 +653,14 @@ export default class MainScene extends Phaser.Scene {
     fruit.initialX = dropX;
     fruit.initialY = dropY;
     this.fruits.push(fruit);
+
+    // 레벨 생성 확인
+    this.checkLevelCreation(dropLevel);
+
+    // 떨어질 때 무서운 표정 표시 (약간 지연)
+    this.time.delayedCall(100, () => {
+      this.showScaredFace(fruit, 2000); // 2초 동안 무서운 표정으로 증가
+    });
 
     // 현재 과일 개수 로깅
     console.log(`현재 과일 개수: ${this.fruits.length}`);
@@ -673,7 +826,6 @@ export default class MainScene extends Phaser.Scene {
       this.minDropLevel = newMinLevel;
       this.maxDropLevel = newMaxLevel;
       this.currentNumber = this.getRandomNumberForLevel(this.minDropLevel);
-      console.log(`떨어트릴 과일 레벨 범위 변경: ${newMinLevel}~${newMaxLevel} (최대 레벨: ${this.maxFruitLevel})`);
     }
   }
 
@@ -1023,8 +1175,6 @@ export default class MainScene extends Phaser.Scene {
             scoreToAdd = group.length * group[0].level;
           }
           
-          console.log(`합치기: ${group.map(f => f.fruitNumber).join('+')} = ${sum}, 레벨: ${group[0].level} → ${newLevel}, 점수: +${scoreToAdd}`);
-          
           // 첫 번째 과일 위치에서 새 과일 생성
           const newX = group[0].x;
           const newY = group[0].y;
@@ -1178,6 +1328,12 @@ export default class MainScene extends Phaser.Scene {
     fruit.initialX = x;
     fruit.initialY = y;
     this.fruits.push(fruit);
+
+    // 합쳐진 과일에도 움직임 추가
+    this.addFruitMovement(fruit);
+
+    // 레벨 생성 확인
+    this.checkLevelCreation(level);
 
     // 과일 숫자 텍스트 추가
     let textContent = newNumber.toString();
@@ -1502,5 +1658,112 @@ export default class MainScene extends Phaser.Scene {
       // 스위치 모드가 아닐 때는 그래픽 지우기
       this.previewGraphics.clear();
     }
+  }
+
+  // 과일에 살아있는 움직임 추가
+  addFruitMovement(fruit) {
+    // 표정 애니메이션 시작 (눈 깜빡임만)
+    let currentTexture = `fruit_${fruit.level}`;
+    let isBlinking = false;
+    
+    // 눈 깜빡임 애니메이션
+    const startBlinking = () => {
+      if (!fruit.active || fruit.isScared) return; // 찡그린 표정일 때는 깜빡임 안 함
+      
+      // 깜빡임 텍스처로 변경
+      fruit.setTexture(`fruit_${fruit.level}_blink`);
+      isBlinking = true;
+      
+      // 150ms 후 원래 텍스처로 복귀
+      this.time.delayedCall(150, () => {
+        if (fruit.active && !fruit.isScared) { // 찡그린 표정이 아닐 때만 복귀
+          fruit.setTexture(currentTexture);
+          isBlinking = false;
+          
+          // 다음 깜빡임 예약 (4-8초 후로 증가)
+          fruit.blinkTimer = this.time.delayedCall(4000 + Math.random() * 4000, startBlinking);
+        }
+      });
+    };
+    
+    // 첫 애니메이션 시작 (3-6초 후로 증가)
+    fruit.blinkTimer = this.time.delayedCall(3000 + Math.random() * 3000, startBlinking);
+    
+    // 활성 상태 설정
+    fruit.active = true;
+  }
+
+  // 무서운 표정 표시
+  showScaredFace(fruit, duration = 1000) {
+    if (!fruit.active) return;
+    
+    // 스프라이트인지 확인
+    if (!fruit.setTexture) return;
+    
+    // 폭탄은 제외
+    const fruitConfig = this.fruitConfigs[fruit.level];
+    if (fruitConfig && fruitConfig.isBomb) return;
+    
+    // 텍스처가 존재하는지 확인
+    const scaredTextureKey = `fruit_${fruit.level}_scared`;
+    if (!this.textures.exists(scaredTextureKey)) {
+      return;
+    }
+    
+    const originalTexture = fruit.texture ? fruit.texture.key : `fruit_${fruit.level}`;
+    
+    // 찡그린 표정 상태 설정
+    fruit.isScared = true;
+    
+    // 기존 눈 깜빡임 타이머 취소
+    if (fruit.blinkTimer) {
+      this.time.removeEvent(fruit.blinkTimer);
+      fruit.blinkTimer = null;
+    }
+    
+    try {
+      fruit.setTexture(scaredTextureKey);
+      
+      // 지정된 시간 후 원래 텍스처로 복귀 (강제 복귀)
+      const revertTimer = this.time.delayedCall(duration, () => {
+        if (fruit.active && fruit.setTexture && this.textures.exists(originalTexture)) {
+          fruit.setTexture(originalTexture);
+          fruit.isScared = false; // 찡그린 표정 상태 해제
+          
+          // 눈 깜빡임 재시작
+          this.restartBlinking(fruit);
+        }
+      });
+      
+      // 타이머 저장
+      fruit.scaredTimer = revertTimer;
+      
+    } catch (error) {
+      console.error(`표정 변경 실패: ${scaredTextureKey}`, error);
+    }
+  }
+
+  restartBlinking(fruit) {
+    if (!fruit.active || fruit.isScared) return;
+    
+    let currentTexture = `fruit_${fruit.level}`;
+    
+    const startBlinking = () => {
+      if (!fruit.active || fruit.isScared) return;
+      
+      fruit.setTexture(`fruit_${fruit.level}_blink`);
+      
+      this.time.delayedCall(150, () => {
+        if (fruit.active && !fruit.isScared) {
+          fruit.setTexture(currentTexture);
+          
+          // 다음 깜빡임 예약 (4-8초 후로 증가)
+          fruit.blinkTimer = this.time.delayedCall(4000 + Math.random() * 4000, startBlinking);
+        }
+      });
+    };
+    
+    // 재시작 시에도 3-6초 후로 증가
+    fruit.blinkTimer = this.time.delayedCall(3000 + Math.random() * 3000, startBlinking);
   }
 }

@@ -1,5 +1,8 @@
 // Phaser 기반 과일 그리기 함수들
 
+// 동적 표정 애니메이션을 위한 저장소
+const fruitAnimations = new Map();
+
 export function createFruitTextures(scene) {
   const fruitDrawers = [
     null, // 레벨 0 (사용 안함)
@@ -17,8 +20,8 @@ export function createFruitTextures(scene) {
     drawBomb
   ];
 
-  function createTexture(scene, key, drawer, number = 9) {
-    // 이미 텍스처가 존재하면 제거하고 다시 생성 (새로운 스타일 적용 및 충돌 방지)
+  function createTexture(scene, key, drawer, param = 9) {
+    // 이미 텍스처가 존재하면 제거하고 다시 생성
     if (scene.textures.exists(key)) {
       scene.textures.remove(key);
     }
@@ -26,13 +29,37 @@ export function createFruitTextures(scene) {
     const canvas = document.createElement('canvas');
     canvas.width = 400;
     canvas.height = 400;
-    drawer(canvas, 400, number);
+    
+    try {
+      // param이 문자열(애니메이션 타입)이면 그대로 전달, 아니면 숫자로 전달
+      if (typeof param === 'string') {
+        drawer(canvas, 400, param);
+      } else {
+        drawer(canvas, 400, param);
+      }
 
-    const texture = scene.textures.createCanvas(key, canvas.width, canvas.height);
-    if (texture) {
-      const ctx = texture.getContext();
-      ctx.drawImage(canvas, 0, 0);
-      texture.refresh();
+      const texture = scene.textures.createCanvas(key, canvas.width, canvas.height);
+      if (texture) {
+        const ctx = texture.getContext();
+        ctx.drawImage(canvas, 0, 0);
+        texture.refresh();
+      } else {
+        console.error(`텍스처 생성 실패: ${key} - texture가 null`);
+      }
+    } catch (error) {
+      console.error(`텍스처 생성 실패: ${key}`, error);
+      // 실패하면 기본 텍스처로 대체
+      try {
+        drawer(canvas, 400, 'normal');
+        const texture = scene.textures.createCanvas(key, canvas.width, canvas.height);
+        if (texture) {
+          const ctx = texture.getContext();
+          ctx.drawImage(canvas, 0, 0);
+          texture.refresh();
+        }
+      } catch (fallbackError) {
+        console.error(`기본 텍스처 생성도 실패: ${key}`, fallbackError);
+      }
     }
   }
 
@@ -50,9 +77,54 @@ export function createFruitTextures(scene) {
       } else {
         // 일반 과일
         createTexture(scene, `fruit_${index}`, drawer);
+        
+        // 표정 애니메이션을 위한 추가 텍스처 (깜빡임과 무서운 표정)
+        createTexture(scene, `fruit_${index}_blink`, drawer, 'blink');
+        createTexture(scene, `fruit_${index}_scared`, drawer, 'scared');
       }
     }
   });
+}
+
+// 동적 표정 그리기 함수
+function drawFruitFaceAnimated(ctx, x, y, radius, animation = 'normal') {
+  if (animation === 'scared') {
+    // 무서운 표정
+    drawScaredFace(ctx, x, y, radius, 0.8);
+  } else if (animation === 'blink') {
+    // 눈 깜빡임 - 눈만 감고 입은 그대로
+    ctx.fillStyle = '#331A00';
+    const eyeSize = radius * 0.28; 
+    const eyeOffset = radius * 0.35; 
+    const eyeY = y - radius * 0.1;
+    
+    // 눈만 깜빡임
+    ctx.beginPath();
+    ctx.ellipse(x - eyeOffset, eyeY, eyeSize, eyeSize * 0.1, 0, 0, Math.PI * 2);
+    ctx.ellipse(x + eyeOffset, eyeY, eyeSize, eyeSize * 0.1, 0, 0, Math.PI * 2);
+    ctx.fill();
+    
+    // 입은 일반 표정과 동일하게 유지
+    ctx.strokeStyle = '#331A00';
+    ctx.lineWidth = radius * 0.08;
+    ctx.lineCap = 'round';
+    ctx.beginPath();
+    ctx.arc(x, y + radius * 0.12, radius * 0.35, 0.1 * Math.PI, 0.9 * Math.PI);
+    ctx.stroke();
+    
+    // 볼도 일반 표정과 동일하게 유지
+    ctx.fillStyle = 'rgba(255, 120, 180, 0.75)'; 
+    const blushW = radius * 0.28;
+    const blushH = radius * 0.15;
+    const blushY = y + radius * 0.28;
+    ctx.beginPath();
+    ctx.ellipse(x - radius * 0.55, blushY, blushW, blushH, 0, 0, Math.PI * 2);
+    ctx.ellipse(x + radius * 0.55, blushY, blushW, blushH, 0, 0, Math.PI * 2);
+    ctx.fill();
+  } else {
+    // 일반 표정
+    drawFruitFace(ctx, x, y, radius);
+  }
 }
 
 function drawFruitFace(ctx, x, y, radius) {
@@ -94,6 +166,76 @@ function drawFruitFace(ctx, x, y, radius) {
   ctx.ellipse(x - radius * 0.55, blushY, blushW, blushH, 0, 0, Math.PI * 2);
   ctx.ellipse(x + radius * 0.55, blushY, blushW, blushH, 0, 0, Math.PI * 2);
   ctx.fill();
+}
+
+function drawScaredFace(ctx, x, y, radius, fearLevel = 0.8) {
+  // 더 완화된 찡그린 표정
+  
+  // 1. 눈 (삐죽거린 정도 더 줄임)
+  ctx.fillStyle = '#331A00';
+  const eyeSize = radius * 0.26; // 더 작은 눈
+  const eyeOffset = radius * 0.35;
+  const eyeY = y - radius * 0.03; // 눈 위치 약간 위로
+  
+  // 왼쪽 눈 (삐죽거린 정도 더 줄임)
+  ctx.beginPath();
+  ctx.moveTo(x - eyeOffset - eyeSize * 0.7, eyeY);
+  ctx.quadraticCurveTo(x - eyeOffset, eyeY - eyeSize * 0.1, x - eyeOffset + eyeSize * 0.7, eyeY);
+  ctx.fill();
+  
+  // 오른쪽 눈 (삐죽거린 정도 더 줄임)
+  ctx.beginPath();
+  ctx.moveTo(x + eyeOffset - eyeSize * 0.7, eyeY);
+  ctx.quadraticCurveTo(x + eyeOffset, eyeY - eyeSize * 0.1, x + eyeOffset + eyeSize * 0.7, eyeY);
+  ctx.fill();
+  
+  // 2. 눈썹 (더 완화된 각도)
+  ctx.strokeStyle = '#331A00';
+  ctx.lineWidth = radius * 0.03; // 더 얇은 눈썹
+  ctx.lineCap = 'round';
+  
+  // 왼쪽 눈썹
+  ctx.beginPath();
+  ctx.moveTo(x - eyeOffset - eyeSize * 0.5, eyeY - eyeSize * 0.3);
+  ctx.lineTo(x - eyeOffset + eyeSize * 0.5, eyeY - eyeSize * 0.15);
+  ctx.stroke();
+  
+  // 오른쪽 눈썹
+  ctx.beginPath();
+  ctx.moveTo(x + eyeOffset - eyeSize * 0.5, eyeY - eyeSize * 0.15);
+  ctx.lineTo(x + eyeOffset + eyeSize * 0.5, eyeY - eyeSize * 0.3);
+  ctx.stroke();
+  
+  // 3. 입 (더 완화된 삐짐)
+  ctx.strokeStyle = '#331A00';
+  ctx.lineWidth = radius * 0.04; // 더 얇은 입술
+  ctx.lineCap = 'round';
+  ctx.beginPath();
+  
+  // 약간 삐진 입 (더 완화된 ∧ 모양)
+  const mouthWidth = radius * 0.3;
+  const mouthY = y + radius * 0.18;
+  const mouthHeight = radius * 0.02; // 더 작은 높이
+  
+  ctx.moveTo(x - mouthWidth, mouthY + mouthHeight);
+  ctx.lineTo(x, mouthY - mouthHeight);
+  ctx.lineTo(x + mouthWidth, mouthY + mouthHeight);
+  ctx.stroke();
+  
+  // 4. 아주 약간의 주름 (거의 보이지 않을 정도)
+  ctx.strokeStyle = 'rgba(51, 26, 0, 0.1)'; // 거의 투명한 주름
+  ctx.lineWidth = radius * 0.015; // 아주 얇은 주름
+  
+  // 이마 주름 (아주 짧게)
+  ctx.beginPath();
+  ctx.moveTo(x - radius * 0.2, y - radius * 0.18);
+  ctx.lineTo(x - radius * 0.12, y - radius * 0.1);
+  ctx.stroke();
+  
+  ctx.beginPath();
+  ctx.moveTo(x + radius * 0.2, y - radius * 0.18);
+  ctx.lineTo(x + radius * 0.12, y - radius * 0.1);
+  ctx.stroke();
 }
 
 function drawAngryFace(ctx, x, y, radius, angerLevel = 0) {
@@ -179,7 +321,7 @@ function drawAngryFace(ctx, x, y, radius, angerLevel = 0) {
   ctx.stroke();  
 }
 
-function drawCherry(canvas, size) {
+function drawCherry(canvas, size, animation = 'normal') {
   const ctx = canvas.getContext('2d');
   const radius = size / 2;
   ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -261,10 +403,11 @@ function drawCherry(canvas, size) {
   ctx.ellipse(cx + bodyRadius * 0.4, cy + bodyRadius * 0.4, bodyRadius * 0.1, bodyRadius * 0.1, 0, 0, Math.PI * 2);
   ctx.fill();
 
-  drawFruitFace(ctx, cx, cy, bodyRadius);
+  // 동적 표정 그리기
+  drawFruitFaceAnimated(ctx, cx, cy, bodyRadius, animation);
 }
 
-function drawGrape(canvas, size) {
+function drawGrape(canvas, size, animation = 'normal') {
   const ctx = canvas.getContext('2d');
   const radius = size / 2;
   ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -323,10 +466,10 @@ function drawGrape(canvas, size) {
   ctx.ellipse(cx - bodyRadius * 0.3, cy - bodyRadius * 0.45, bodyRadius * 0.15, bodyRadius * 0.08, 0, 0, Math.PI * 2);
   ctx.fill();
 
-  drawFruitFace(ctx, cx, cy, bodyRadius);
+  drawFruitFaceAnimated(ctx, cx, cy, bodyRadius, animation);
 }
 
-function drawStrawberry(canvas, size) {
+function drawStrawberry(canvas, size, animation = 'normal') {
   const ctx = canvas.getContext('2d');
   const radius = size / 2;
   ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -486,11 +629,11 @@ function drawStrawberry(canvas, size) {
   ctx.ellipse(radius * 0.7, radius * 0.7, radius * 0.15, radius * 0.2, 0.2, 0, Math.PI * 2);
   ctx.fill();
 
-  drawFruitFace(ctx, radius, radius * 1.0, radius * 0.85); // 표정 위치 및 크기 조정
+  drawFruitFaceAnimated(ctx, radius, radius * 1.0, radius * 0.85, animation); // 표정 위치 및 크기 조정
 }
 
 
-function drawOrange(canvas, size) {
+function drawOrange(canvas, size, animation = 'normal') {
   const ctx = canvas.getContext('2d');
   const radius = size / 2;
   ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -568,10 +711,10 @@ function drawOrange(canvas, size) {
   ctx.arc(radius * 0.6, radius * 0.6, radius * 0.25, 0, Math.PI * 2);
   ctx.fill();
 
-  drawFruitFace(ctx, radius, radius, radius * 0.9);
+  drawFruitFaceAnimated(ctx, radius, radius, radius * 0.9, animation);
 }
 
-function drawPersimmon(canvas, size) {
+function drawPersimmon(canvas, size, animation = 'normal') {
   const ctx = canvas.getContext('2d');
   const radius = size / 2;
   ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -619,10 +762,10 @@ function drawPersimmon(canvas, size) {
   ctx.ellipse(radius * 0.6, radius * 0.6, radius * 0.2, radius * 0.15, -0.5, 0, Math.PI * 2);
   ctx.fill();
 
-  drawFruitFace(ctx, radius, radius * 1.05, radius * 0.9);
+  drawFruitFaceAnimated(ctx, radius, radius * 1.05, radius * 0.9, animation);
 }
 
-function drawApple(canvas, size) {
+function drawApple(canvas, size, animation = 'normal') {
   const ctx = canvas.getContext('2d');
   const radius = size / 2;
   ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -687,10 +830,10 @@ function drawApple(canvas, size) {
   ctx.arc(radius * 0.6, radius * 0.6, radius * 0.3, 0, Math.PI * 2);
   ctx.fill();
 
-  drawFruitFace(ctx, radius, radius, radius * 0.9);
+  drawFruitFaceAnimated(ctx, radius, radius, radius * 0.9, animation);
 }
 
-function drawPear(canvas, size) {
+function drawPear(canvas, size, animation = 'normal') {
   const ctx = canvas.getContext('2d');
   const radius = size / 2;
   ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -740,10 +883,10 @@ function drawPear(canvas, size) {
   ctx.arc(radius * 0.6, radius * 0.8, radius * 0.3, 0, Math.PI * 2);
   ctx.fill();
 
-  drawFruitFace(ctx, radius, radius * 0.8, radius * 0.7);
+  drawFruitFaceAnimated(ctx, radius, radius * 0.8, radius * 0.7, animation);
 }
 
-function drawPeach(canvas, size) {
+function drawPeach(canvas, size, animation = 'normal') {
   const ctx = canvas.getContext('2d');
   const radius = size / 2;
   ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -798,10 +941,10 @@ function drawPeach(canvas, size) {
   ctx.arc(radius * 0.6, radius * 0.6, radius * 0.3, 0, Math.PI * 2);
   ctx.fill();
 
-  drawFruitFace(ctx, radius, radius, radius * 0.9);
+  drawFruitFaceAnimated(ctx, radius, radius, radius * 0.9, animation);
 }
 
-function drawPineapple(canvas, size) {
+function drawPineapple(canvas, size, animation = 'normal') {
   const ctx = canvas.getContext('2d');
   const radius = size / 2;
   ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -883,10 +1026,10 @@ function drawPineapple(canvas, size) {
   ctx.arc(radius * 0.6, radius * 0.6, radius * 0.25, 0, Math.PI * 2);
   ctx.fill();
 
-  drawFruitFace(ctx, radius, radius, radius * 0.9);
+  drawFruitFaceAnimated(ctx, radius, radius, radius * 0.9, animation);
 }
 
-function drawMelon(canvas, size) {
+function drawMelon(canvas, size, animation = 'normal') {
   const ctx = canvas.getContext('2d');
   const radius = size / 2;
   ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -970,10 +1113,10 @@ function drawMelon(canvas, size) {
   ctx.arc(radius * 0.6, radius * 0.6, radius * 0.25, 0, Math.PI * 2);
   ctx.fill();
 
-  drawFruitFace(ctx, radius, radius, radius * 0.9);
+  drawFruitFaceAnimated(ctx, radius, radius, radius * 0.9, animation);
 }
 
-function drawWatermelon(canvas, size) {
+function drawWatermelon(canvas, size, animation = 'normal') {
   const ctx = canvas.getContext('2d');
   const radius = size / 2;
   ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -1068,7 +1211,7 @@ function drawWatermelon(canvas, size) {
   ctx.arc(radius * 0.6, radius * 0.6, radius * 0.25, 0, Math.PI * 2);
   ctx.fill();
 
-  drawFruitFace(ctx, radius, radius, radius * 0.7);
+  drawFruitFaceAnimated(ctx, radius, radius, radius * 0.7, animation);
 }
 
 function drawBomb(canvas, size, timerValue = 9) {
