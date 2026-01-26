@@ -2,6 +2,7 @@
   "name": "make-the-melon",
   "version": "1.0.0",
   "main": "index.js",
+  "homepage": "https://chu-rit.github.io/makeTheMelon",
   "scripts": {
     "start": "expo start",
     "android": "expo start --android",
