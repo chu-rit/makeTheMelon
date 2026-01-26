@@ -10,7 +10,7 @@
     "web": "expo start --web",
     "dev": "expo start --web",
     "build": "expo export --platform web",
-    "build-clean": "expo export --platform web && rm -rf clean-build && mkdir clean-build && cp -r dist/* clean-build/ && sed -i 's/_expo\\/static/static/g' clean-build/index.html",
+    "build-clean": "expo export --platform web && Remove-Item -Recurse -Force clean-build -ErrorAction SilentlyContinue; New-Item -ItemType Directory -Force clean-build; Copy-Item -Recurse -Force dist/* clean-build/; (Get-Content clean-build/index.html) -replace '_expo/static','static' | Set-Content clean-build/index.html",
     "deploy": "expo export --platform web && gh-pages -d dist"
   },
   "dependencies": {
