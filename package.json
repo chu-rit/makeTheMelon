@@ -10,6 +10,7 @@
     "web": "expo start --web",
     "dev": "expo start --web",
     "build": "expo export --platform web",
+    "build-clean": "expo export --platform web && rm -rf clean-build && mkdir clean-build && cp -r dist/* clean-build/ && sed -i 's/_expo\\/static/static/g' clean-build/index.html",
     "deploy": "expo export --platform web && gh-pages -d dist"
   },
   "dependencies": {
