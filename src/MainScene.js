@@ -85,9 +85,9 @@ export default class MainScene extends Phaser.Scene {
     });
 
     // 4. 인벤토리 영역 (우측 상단)
-    const inventoryX = width - 80;
+    const inventoryX = width - 110;
     const inventoryY = 60;
-    const inventoryWidth = 120;
+    const inventoryWidth = 180; // 120에서 180으로 확장
     const inventoryHeight = 100;
     const inventoryRadius = 15; // 둥근 모서리 반지름
 
@@ -106,6 +106,62 @@ export default class MainScene extends Phaser.Scene {
       fontWeight: 'bold'
     }).setOrigin(0.5);
     inventoryLabel.setDepth(11);
+
+    // 테스트용 아이템 추가 버튼 (인벤토리 아래)
+    const testBtnX = inventoryX;
+    const testBtnY = inventoryY + inventoryHeight/2 + 25;
+    const testBtnWidth = 140;
+    const testBtnHeight = 30;
+    
+    const testBtnBg = this.add.graphics();
+    testBtnBg.fillStyle(0x4CAF50, 0.9);
+    testBtnBg.fillRoundedRect(testBtnX - testBtnWidth/2, testBtnY - testBtnHeight/2, testBtnWidth, testBtnHeight, 8);
+    testBtnBg.lineStyle(2, 0x388E3C, 1);
+    testBtnBg.strokeRoundedRect(testBtnX - testBtnWidth/2, testBtnY - testBtnHeight/2, testBtnWidth, testBtnHeight, 8);
+    testBtnBg.setDepth(10);
+    
+    const testBtnText = this.add.text(testBtnX, testBtnY, '+ 아이템 테스트', {
+      fontSize: '14px',
+      color: '#ffffff',
+      fontFamily: 'Arial',
+      fontWeight: 'bold'
+    }).setOrigin(0.5);
+    testBtnText.setDepth(11);
+    
+    // 테스트 버튼 인터랙션
+    const testBtnZone = this.add.zone(testBtnX, testBtnY, testBtnWidth, testBtnHeight).setInteractive();
+    testBtnZone.setDepth(12);
+    
+    testBtnZone.on('pointerdown', () => {
+      // 테스트용 아이템 1개 추가 (랜덤으로 폭탄 또는 레인보우)
+      this.createSpecialItem();
+      
+      // 클릭 효과
+      this.tweens.add({
+        targets: [testBtnBg, testBtnText],
+        scaleX: 0.95,
+        scaleY: 0.95,
+        duration: 100,
+        yoyo: true,
+        ease: 'Power2'
+      });
+    });
+    
+    testBtnZone.on('pointerover', () => {
+      testBtnBg.clear();
+      testBtnBg.fillStyle(0x66BB6A, 0.9);
+      testBtnBg.fillRoundedRect(testBtnX - testBtnWidth/2, testBtnY - testBtnHeight/2, testBtnWidth, testBtnHeight, 8);
+      testBtnBg.lineStyle(2, 0x388E3C, 1);
+      testBtnBg.strokeRoundedRect(testBtnX - testBtnWidth/2, testBtnY - testBtnHeight/2, testBtnWidth, testBtnHeight, 8);
+    });
+    
+    testBtnZone.on('pointerout', () => {
+      testBtnBg.clear();
+      testBtnBg.fillStyle(0x4CAF50, 0.9);
+      testBtnBg.fillRoundedRect(testBtnX - testBtnWidth/2, testBtnY - testBtnHeight/2, testBtnWidth, testBtnHeight, 8);
+      testBtnBg.lineStyle(2, 0x388E3C, 1);
+      testBtnBg.strokeRoundedRect(testBtnX - testBtnWidth/2, testBtnY - testBtnHeight/2, testBtnWidth, testBtnHeight, 8);
+    });
 
     // 폭탄 버튼 저장소
     this.bombButtons = [];
@@ -265,46 +321,113 @@ export default class MainScene extends Phaser.Scene {
   }
 
   checkLevelCreation(newLevel) {
-    // 레벨 4부터 새로운 레벨이 처음 생성되었을 때 폭탄 버튼 1개만 생성
-    if (newLevel >= 4 && !this.createdLevels.has(newLevel)) {
+    // 레벨 3부터 새로운 레벨이 처음 생성되었을 때 특수 아이템(폭탄 또는 레인보우) 1개 생성
+    if (newLevel >= 3 && !this.createdLevels.has(newLevel)) {
       this.createdLevels.add(newLevel);
-      this.createBombButton();
+      this.createSpecialItem();
     }
   }
 
-  createBombButton() {
-    const inventoryX = this.scale.width - 80;
-    const inventoryY = 60;
-    const bombIndex = this.bombButtons.length + 1;
+  createSpecialItem() {
+    // 50% 확률로 폭탄 또는 레인보우 과일 중 랜덤 선택
+    const isRainbow = Math.random() < 0.5;
+    const itemType = isRainbow ? 'rainbow' : 'bomb';
     
-    // 폭탄 버튼 위치 계산 (인벤토리 내에서)
-    const bombX = inventoryX - 30 + (bombIndex - 1) * 25;
-    const bombY = inventoryY + 10;
-    const bombRadius = 15;
+    // 인벤토리 영역 (화면 오른쪽 상단 - 배경과 동일한 위치)
+    const inventoryX = this.scale.width - 110;
+    const inventoryY = 70; // 60에서 70으로 내려서 INVENTORY 글자 안 가리게
+    
+    // 아이템 데이터 저장 (모든 아이템은 저장)
+    const itemData = {
+      itemType: itemType,
+      isRainbow: isRainbow
+    };
+    this.bombButtons.push(itemData);
+    
+    // 최대 3개까지만 시각적으로 표시
+    this.updateInventoryDisplay(inventoryX, inventoryY);
+  }
 
-    const bombBtn = this.add.container(bombX, bombY);
-    bombBtn.setDepth(15);
-    bombBtn.setData('isBombButton', true);
+  updateInventoryDisplay(inventoryX, inventoryY) {
+    // 기존에 표시된 아이템 버튼들 제거
+    this.bombButtons.forEach(btn => {
+      if (btn.container) {
+        btn.container.destroy();
+        btn.container = null;
+      }
+    });
+    
+    // 앞에서부터 최대 3개만 표시 (인벤토리 중앙에 정렬)
+    const visibleCount = Math.min(3, this.bombButtons.length);
+    const startX = inventoryX - 50; // 중앙에서 왼쪽으로 50px
+    for (let i = 0; i < visibleCount; i++) {
+      const btn = this.bombButtons[i];
+      const itemX = startX + i * 50; // 간격 50px
+      const itemY = inventoryY;
+      this.createItemButtonVisual(btn, itemX, itemY);
+    }
+    
+    // 남은 아이템 개수 표시 (3개 초과시, 오른쪽 끝에)
+    if (this.bombButtons.length > 3) {
+      const remainingCount = this.bombButtons.length - 3;
+      this.showRemainingCount(inventoryX + 75, inventoryY, remainingCount);
+    }
+  }
+
+  showRemainingCount(x, y, count) {
+    // 기존 카운트 텍스트 제거
+    if (this.remainingText) {
+      this.remainingText.destroy();
+    }
+    
+    this.remainingText = this.add.text(x + 15, y, `+${count}`, {
+      fontSize: '16px',
+      color: '#FFD700',
+      fontFamily: 'Arial',
+      fontWeight: 'bold',
+      stroke: '#000000',
+      strokeThickness: 2
+    }).setOrigin(0.5);
+    this.remainingText.setDepth(16);
+  }
+
+  createItemButtonVisual(btn, itemX, itemY) {
+    const itemRadius = 18;
+    const isRainbow = btn.isRainbow;
+    const itemType = btn.itemType;
+
+    const itemBtn = this.add.container(itemX, itemY);
+    itemBtn.setDepth(15);
+    itemBtn.setData('isBombButton', true);
+    itemBtn.setData('itemType', itemType);
+    
+    // 버튼 컨테이너를 btn 객체에 저장
+    btn.container = itemBtn;
 
     // 버튼 배경
-    const bombBtnBg = this.add.graphics();
-    bombBtnBg.fillStyle(0x333333, 0.8);
-    bombBtnBg.fillCircle(0, 0, bombRadius);
-    bombBtnBg.lineStyle(2, 0xffd700, 1); // 금색 테두리
-    bombBtnBg.strokeCircle(0, 0, bombRadius);
-    bombBtn.add(bombBtnBg);
+    const itemBtnBg = this.add.graphics();
+    if (isRainbow) {
+      itemBtnBg.fillStyle(0xFF69B4, 0.9);
+    } else {
+      itemBtnBg.fillStyle(0x333333, 0.8);
+    }
+    itemBtnBg.fillCircle(0, 0, itemRadius);
+    itemBtnBg.lineStyle(2, 0xffd700, 1);
+    itemBtnBg.strokeCircle(0, 0, itemRadius);
+    itemBtn.add(itemBtnBg);
 
-    // 폭탄 아이콘
-    const bombIcon = this.add.sprite(0, 0, 'fruit_bomb_9');
-    bombIcon.setScale(0.15); // 작은 아이콘 크기
-    bombBtn.add(bombIcon);
+    // 아이템 아이콘
+    let iconTexture = isRainbow ? 'fruit_rainbow' : 'fruit_bomb_9';
+    const itemIcon = this.add.sprite(0, 0, iconTexture);
+    itemIcon.setScale(0.18);
+    itemBtn.add(itemIcon);
 
     // 인터랙션
-    const bombBtnZone = this.add.zone(0, 0, bombRadius * 2, bombRadius * 2)
-      .setInteractive(new Phaser.Geom.Circle(bombRadius, bombRadius, bombRadius * 1.2), Phaser.Geom.Circle.Contains);
-    bombBtn.add(bombBtnZone);
+    const itemBtnZone = this.add.zone(0, 0, itemRadius * 2, itemRadius * 2)
+      .setInteractive(new Phaser.Geom.Circle(itemRadius, itemRadius, itemRadius * 1.2), Phaser.Geom.Circle.Contains);
+    itemBtn.add(itemBtnZone);
 
-    bombBtnZone.on('pointerdown', (pointer, localX, localY, event) => {
+    itemBtnZone.on('pointerdown', (pointer, localX, localY, event) => {
       if (event && event.stopPropagation) {
         event.stopPropagation();
       }
@@ -312,11 +435,17 @@ export default class MainScene extends Phaser.Scene {
       if (this.isGameOver || this.gameOverWarning || !this.canDrop) return;
       if (this.isDraggingBomb) return;
 
-      // 폭탄 모드로 전환
+      // 특수 아이템 모드로 전환
       this.isDraggingBomb = true;
       this.bombInitialCount = this.previewNumber;
-      const bombLevel = this.fruitConfigs.length - 1;
-      this.previewLevel = bombLevel;
+      
+      if (itemType === 'rainbow') {
+        const rainbowLevel = this.fruitConfigs.length - 1;
+        this.previewLevel = rainbowLevel;
+      } else {
+        const bombLevel = this.fruitConfigs.length - 2;
+        this.previewLevel = bombLevel;
+      }
       
       this.lastPointerX = pointer.x;
       if (!this.isSwitchMode) {
@@ -325,7 +454,7 @@ export default class MainScene extends Phaser.Scene {
 
       // 버튼 클릭 효과
       this.tweens.add({
-        targets: bombBtn,
+        targets: itemBtn,
         scaleX: 0.9,
         scaleY: 0.9,
         duration: 100,
@@ -333,31 +462,51 @@ export default class MainScene extends Phaser.Scene {
         ease: 'Power2'
       });
 
-      // 폭탄 버튼 제거 예약 (사용 후)
+      // 아이템 사용 후 제거
       this.time.delayedCall(100, () => {
-        this.removeBombButton(bombBtn);
+        this.removeItemAtIndex(0); // 첫 번째 아이템 사용
       });
     });
 
-    bombBtnZone.on('pointerup', () => {
+    itemBtnZone.on('pointerup', () => {
       if (this.isDraggingBomb) {
         this.isDraggingBomb = false;
-        this.previewLevel = this.currentFruitLevel;
+        this.previewLevel = this.minDropLevel;
         this.updatePreview(this.lastPointerX, this.previewY);
       }
     });
 
-    bombBtnZone.on('pointermove', (pointer) => {
+    itemBtnZone.on('pointermove', (pointer) => {
       if (this.isDraggingBomb) {
         this.lastPointerX = pointer.x;
         this.updatePreview(pointer.x, this.previewY);
       }
     });
 
-    this.bombButtons.push(bombBtn);
+    // 아이템 생성 이펙트
+    this.createBombAppearEffect(itemX, itemY);
+  }
 
-    // 폭탄 생성 이펙트
-    this.createBombAppearEffect(bombX, bombY);
+  removeItemAtIndex(index) {
+    if (index >= this.bombButtons.length) return;
+    
+    // 해당 인덱스의 아이템 제거
+    const btn = this.bombButtons[index];
+    if (btn && btn.container) {
+      btn.container.destroy();
+    }
+    this.bombButtons.splice(index, 1);
+    
+    // 인벤토리 다시 그리기 (다음 아이템이 보이게)
+    const inventoryX = this.scale.width - 110;
+    const inventoryY = 70; // 60에서 70으로 내려서 INVENTORY 글자 안 가리게
+    this.updateInventoryDisplay(inventoryX, inventoryY);
+  }
+
+  createBombButton() {
+    // 이전 함수는 더 이상 사용하지 않음 (createSpecialItem 사용)
+    // 하위 호환성을 위해 남겨두되 createSpecialItem 호출
+    this.createSpecialItem();
   }
 
   createBombAppearEffect(x, y) {
@@ -442,18 +591,19 @@ export default class MainScene extends Phaser.Scene {
   }
 
   rearrangeBombButtons() {
-    const inventoryX = this.scale.width - 80;
-    const inventoryY = 60;
+    const inventoryX = this.scale.width - 110;
+    const inventoryY = 70;
     
     // 남은 폭탄 버튼들 위치 재정렬
     this.bombButtons.forEach((bombBtn, index) => {
-      const bombX = inventoryX - 30 + index * 25;
-      const bombY = inventoryY + 10;
+      // bombBtn이 container인 경우 (이전 방식)와 itemData인 경우 (새 방식) 구분
+      const targetX = inventoryX - 50 + index * 50;
+      const targetY = inventoryY;
       
       this.tweens.add({
-        targets: bombBtn,
-        x: bombX,
-        y: bombY,
+        targets: bombBtn.container || bombBtn,
+        x: targetX,
+        y: targetY,
         duration: 200,
         ease: 'Power2'
       });
@@ -597,14 +747,19 @@ export default class MainScene extends Phaser.Scene {
     let textureKey = `fruit_${dropLevel}`;
     if (this.fruitConfigs[dropLevel].isBomb) {
       textureKey = `fruit_bomb_${dropNumber}`;
+    } else if (this.fruitConfigs[dropLevel].isRainbow) {
+      textureKey = 'fruit_rainbow';
     }
     const fruit = this.add.sprite(dropX, dropY, textureKey);
     
     // 폭탄 과일은 텍스처 내 여백이 많으므로(스케일 0.75) 더 크게 확대해야 물리 바디와 일치함
     // 일반 과일: radius / 170 (텍스처 내 반지름 약 170px 기준)
     // 폭탄 과일: radius / 142.5 (텍스처 내 반지름 190 * 0.75 = 142.5px 기준)
+    // 레인보우 과일: 일반 과일과 동일하게 처리
     if (this.fruitConfigs[dropLevel].isBomb) {
       fruit.setScale(radius / 142.5);
+    } else if (this.fruitConfigs[dropLevel].isRainbow) {
+      fruit.setScale(radius / 170);
     } else {
       fruit.setScale(radius / 170);
     }
@@ -803,9 +958,9 @@ export default class MainScene extends Phaser.Scene {
     // 현재 게임에 있는 최대 레벨 찾기
     let newMaxLevel = 1; // 최소 레벨은 1
     this.fruits.forEach(fruit => {
-      // 폭탄은 최대 레벨 계산에서 제외
+      // 폭탄과 레인보우는 최대 레벨 계산에서 제외
       const config = this.fruitConfigs[fruit.level];
-      if (config && !config.isBomb && fruit.level > newMaxLevel) {
+      if (config && !config.isBomb && !config.isRainbow && fruit.level > newMaxLevel) {
         newMaxLevel = fruit.level;
       }
     });
@@ -1156,15 +1311,49 @@ export default class MainScene extends Phaser.Scene {
       
       // 모든 가능한 인접 그룹 찾기
       const allGroups = this.findAllAdjacentGroups(fruitsToRemove);
+      
+      // 디버그: 찾은 그룹 수 로깅
+      if (allGroups.length > 0) {
+        console.log(`Found ${allGroups.length} groups`);
+      }
 
       for (let group of allGroups) {
         if (group.length < 2) continue;
 
-        // 그룹의 숫자 합 계산
+        // 그룹에 레인보우 과일이 있는지 확인
+        const hasRainbow = group.some(f => {
+          const config = this.fruitConfigs[f.level];
+          return config && config.isRainbow;
+        });
+
+        // 그룹의 숫자 합 계산 (레인보우는 숫자가 0)
         const sum = group.reduce((acc, f) => acc + f.fruitNumber, 0);
+        
+        // 디버그: 그룹 정보 로깅
+        console.log(`Group: [${group.map(f => f.fruitNumber).join(',')}], sum=${sum}, level=${group[0].level}`);
 
         // 합이 10이면 합치기
         if (sum === 10) {
+          // 레인보우가 있는 경우: 합체 대신 동종 과일 + 레인보우 제거 효과
+          if (hasRainbow) {
+            const targetLevel = group
+              .filter(f => !this.fruitConfigs[f.level].isRainbow)
+              .reduce((max, f) => Math.max(max, f.level), 0);
+            
+            // 그룹 내 레인보우 과일들 찾기
+            const rainbowFruitsInGroup = group.filter(f => this.fruitConfigs[f.level].isRainbow);
+            
+            if (targetLevel > 0) {
+              // 동종 과일 + 레인보우 하이라이트 및 제거 효과 실행
+              // group 전체를 넘겨서 어떤 과일과 합쳐지는지 표시
+              this.playRainbowEffect(targetLevel, rainbowFruitsInGroup, group);
+            }
+            
+            // 합체는 일어나지 않음 - 계속 진행
+            continue;
+          }
+          
+          // 일반 합체 (레인보우 없음)
           const newLevel = group[0].level + 1;
           
           // 점수 계산
@@ -1224,16 +1413,54 @@ export default class MainScene extends Phaser.Scene {
       // 같은 레벨의 모든 인접한 과일들을 BFS로 찾기
       const fullGroup = this.findAdjacentGroup(fruit, fruitsToRemove);
       
-      if (fullGroup.length > 0) {
-        // 전체 그룹 추가
-        groups.push(fullGroup);
+      if (fullGroup.length >= 2) {
+        // 연결 그래프 기반으로 실제 인접 subgroup 생성
+        const adjacencyMap = new Map();
         
-        // 전체 그룹의 모든 연속 부분 그룹도 추가
+        // 인접 관계 맵 구축
         for (let i = 0; i < fullGroup.length; i++) {
-          for (let j = i + 2; j <= fullGroup.length; j++) {
-            const subGroup = fullGroup.slice(i, j);
-            groups.push(subGroup);
+          adjacencyMap.set(fullGroup[i], []);
+          for (let j = 0; j < fullGroup.length; j++) {
+            if (i !== j && this.isAdjacent(fullGroup[i], fullGroup[j])) {
+              adjacencyMap.get(fullGroup[i]).push(fullGroup[j]);
+            }
           }
+        }
+        
+        // 연결된 컴포넌트(서브그룹)들을 찾기
+        const visited = new Set();
+        const components = [];
+        
+        for (let startFruit of fullGroup) {
+          if (visited.has(startFruit)) continue;
+          
+          // BFS로 이 과일과 연결된 모든 과일 찾기
+          const component = [];
+          const queue = [startFruit];
+          visited.add(startFruit);
+          
+          while (queue.length > 0) {
+            const current = queue.shift();
+            component.push(current);
+            
+            const neighbors = adjacencyMap.get(current) || [];
+            for (let neighbor of neighbors) {
+              if (!visited.has(neighbor)) {
+                visited.add(neighbor);
+                queue.push(neighbor);
+              }
+            }
+          }
+          
+          if (component.length >= 2) {
+            components.push(component);
+          }
+        }
+        
+        // 각 연결 컴포넌트 내에서 합이 10이 되는 모든 서브그룹 찾기
+        for (let component of components) {
+          const componentGroups = this.findSubgroupsWithSum10(component, adjacencyMap);
+          groups.push(...componentGroups);
         }
         
         fullGroup.forEach(f => processed.add(f));
@@ -1243,18 +1470,305 @@ export default class MainScene extends Phaser.Scene {
     return groups;
   }
 
+  // 연결된 컴포넌트 내에서 합이 10이 되는 모든 서브그룹 찾기
+  findSubgroupsWithSum10(component, adjacencyMap) {
+    const result = [];
+    const n = component.length;
+    
+    // 과일이 너무 많으면 (20개 이상) 효율적인 탐색 사용
+    if (n > 20) {
+      return this.findSubgroupsWithSum10Efficient(component, adjacencyMap);
+    }
+    
+    // 모든 가능한 서브셋 생성 (비트마스크 사용)
+    // 2개 이상의 과일만 고려
+    for (let mask = 3; mask < (1 << n); mask++) {
+      // 비트 카운트 (과일 개수) - 2개 미만이면 스킵
+      const bitCount = this.countBits(mask);
+      if (bitCount < 2) continue;
+      
+      const subset = [];
+      let sum = 0;
+      let valid = true;
+      
+      for (let i = 0; i < n; i++) {
+        if (mask & (1 << i)) {
+          // fruitNumber가 없으면 0으로 처리
+          const num = component[i].fruitNumber || 0;
+          subset.push(component[i]);
+          sum += num;
+          // 합이 이미 10을 넘으면 중단
+          if (sum > 10) {
+            valid = false;
+            break;
+          }
+        }
+      }
+      
+      // 2개 이상이고 합이 10이면 연결성 확인
+      if (valid && subset.length >= 2 && sum === 10) {
+        // 서브그룹이 연결되어 있는지 확인 (그래프 연결성)
+        if (this.isConnected(subset, adjacencyMap)) {
+          // 중복 체크
+          const isDuplicate = result.some(g => 
+            g.length === subset.length && 
+            subset.every(f => g.includes(f))
+          );
+          
+          if (!isDuplicate) {
+            result.push(subset);
+          }
+        }
+      }
+    }
+    
+    // 우선순위: 1) 과일 개수가 적은 그룹부터, 2) 인덱스가 빠른 과일부터
+    result.sort((a, b) => {
+      if (a.length !== b.length) return a.length - b.length;
+      // 길이가 같으면 첫 과일의 인덱스로 비교
+      const aIdx = component.indexOf(a[0]);
+      const bIdx = component.indexOf(b[0]);
+      return aIdx - bIdx;
+    });
+    
+    return result;
+  }
+
+  // 비트 카운트 헬퍼
+  countBits(n) {
+    let count = 0;
+    while (n) {
+      count += n & 1;
+      n >>= 1;
+    }
+    return count;
+  }
+
+  // 대규모 그룹용 효율적 탐색 (연결된 서브셋 탐색)
+  findSubgroupsWithSum10Efficient(component, adjacencyMap) {
+    const result = [];
+    const n = component.length;
+    
+    // BFS 기반으로 각 과일에서 시작해서 합이 10이 되는 연결된 서브셋 찾기
+    for (let startIdx = 0; startIdx < n; startIdx++) {
+      // BFS 상태: { currentSubset, sum, visitedIndices }
+      // currentSubset: 현재까지 선택한 과일들의 배열
+      // visitedIndices: 방문한 인덱스들의 Set
+      const queue = [{
+        subset: [component[startIdx]],
+        sum: component[startIdx].fruitNumber,
+        visited: new Set([startIdx])
+      }];
+      
+      while (queue.length > 0) {
+        const { subset, sum, visited } = queue.shift();
+        
+        // 합이 10이고 2개 이상이면 결과에 추가
+        if (sum === 10 && subset.length >= 2) {
+          // 중복 체크
+          const isDuplicate = result.some(g => 
+            g.length === subset.length && 
+            subset.every(f => g.includes(f))
+          );
+          
+          if (!isDuplicate) {
+            result.push([...subset]);
+          }
+          // 계속 진행 - 더 큰 서브셋도 찾을 수 있음 (하지만 합이 10이면 더 확장 불필요)
+          continue;
+        }
+        
+        // 합이 10을 넘으면 중단
+        if (sum > 10) continue;
+        
+        // 현재 서브셋의 모든 과일들의 이웃들을 고려
+        // (서브셋 확장: 현재 서브셋에 인접하면서 아직 포함되지 않은 과일 추가)
+        const expansionCandidates = new Set();
+        
+        for (let fruit of subset) {
+          const neighbors = adjacencyMap.get(fruit) || [];
+          for (let neighbor of neighbors) {
+            const neighborIdx = component.indexOf(neighbor);
+            if (neighborIdx !== -1 && !visited.has(neighborIdx)) {
+              expansionCandidates.add(neighborIdx);
+            }
+          }
+        }
+        
+        // 확장 후보들 중에서 각각 확장 시도
+        for (let candidateIdx of expansionCandidates) {
+          const newSum = sum + component[candidateIdx].fruitNumber;
+          if (newSum <= 10) {
+            queue.push({
+              subset: [...subset, component[candidateIdx]],
+              sum: newSum,
+              visited: new Set([...visited, candidateIdx])
+            });
+          }
+        }
+      }
+    }
+    
+    // 우선순위: 과일 개수가 적은 그룹부터
+    result.sort((a, b) => a.length - b.length);
+    
+    return result;
+  }
+
+  // 서브그룹이 연결되어 있는지 확인
+  isConnected(subset, adjacencyMap) {
+    if (subset.length === 0) return false;
+    if (subset.length === 1) return true;
+    
+    const subsetSet = new Set(subset);
+    const visited = new Set();
+    const queue = [subset[0]];
+    visited.add(subset[0]);
+    let count = 1;
+    
+    while (queue.length > 0) {
+      const current = queue.shift();
+      const neighbors = adjacencyMap.get(current) || [];
+      
+      for (let neighbor of neighbors) {
+        if (subsetSet.has(neighbor) && !visited.has(neighbor)) {
+          visited.add(neighbor);
+          queue.push(neighbor);
+          count++;
+        }
+      }
+    }
+    
+    return count === subset.length;
+  }
+
+  // 두 과일 사이의 연결된 subgroup 찾기
+  findConnectedSubgroup(fruitA, fruitB, adjacencyMap, fullGroup) {
+    const visited = new Set([fruitA]);
+    const queue = [fruitA];
+    const group = [fruitA];
+    
+    while (queue.length > 0) {
+      const current = queue.shift();
+      const neighbors = adjacencyMap.get(current) || [];
+      
+      for (let neighbor of neighbors) {
+        if (!visited.has(neighbor)) {
+          visited.add(neighbor);
+          group.push(neighbor);
+          queue.push(neighbor);
+          
+          // fruitB를 찾으면 현재까지의 그룹 반환
+          if (neighbor === fruitB) {
+            return group;
+          }
+        }
+      }
+    }
+    
+    return group;
+  }
+
+  // 배열 비교 유틸리티
+  arraysEqual(a, b) {
+    if (a.length !== b.length) return false;
+    const sortedA = [...a].sort((x, y) => x.level - y.level || x.x - y.x);
+    const sortedB = [...b].sort((x, y) => x.level - y.level || x.x - y.x);
+    return sortedA.every((item, index) => item === sortedB[index]);
+  }
+
   findAdjacentGroup(startFruit, fruitsToRemove) {
+    // 효과 중인 과일은 그룹에 포함되지 않음
+    if (startFruit.isInRainbowEffect) return [];
+    
+    const startConfig = this.fruitConfigs[startFruit.level];
+    const isStartRainbow = startConfig && startConfig.isRainbow;
+    
+    // 시작 과일이 레인보우면: 인접한 과일의 레벨을 따라 그룹을 여러 개 반환할 수 있음
+    // 하지만 여기서는 한 그룹만 반환하므로, 첫 번째로 찾은 레벨로 고정
+    if (isStartRainbow) {
+      // 레인보우와 인접한 모든 과일들을 찾아서, 각 레벨별로 그룹을 분리
+      const adjacentFruits = [];
+      
+      for (let fruit of this.fruits) {
+        if (fruit.isInRainbowEffect) continue;
+        if (fruitsToRemove.includes(fruit)) continue;
+        if (fruit === startFruit) continue;
+        
+        const fruitConfig = this.fruitConfigs[fruit.level];
+        if (!fruitConfig || fruitConfig.isRainbow || fruitConfig.isBomb) continue;
+        
+        if (this.isAdjacent(startFruit, fruit)) {
+          adjacentFruits.push(fruit);
+        }
+      }
+      
+      // 인접한 과일이 없으면 빈 그룹
+      if (adjacentFruits.length === 0) return [];
+      
+      // 첫 번째 인접 과일의 레벨을 기준으로 그룹 형성
+      const baseLevel = adjacentFruits[0].level;
+      const group = [startFruit, adjacentFruits[0]];
+      const visited = new Set([startFruit, adjacentFruits[0]]);
+      const queue = [adjacentFruits[0]];
+      
+      // 같은 레벨의 다른 인접 과일들도 추가
+      while (queue.length > 0) {
+        const current = queue.shift();
+        
+        for (let fruit of this.fruits) {
+          if (visited.has(fruit)) continue;
+          if (fruit.isInRainbowEffect) continue;
+          if (fruitsToRemove.includes(fruit)) continue;
+          
+          const fruitConfig = this.fruitConfigs[fruit.level];
+          if (!fruitConfig) continue;
+          
+          // 같은 레벨의 과일만 추가 (레인보우는 이미 포함됨)
+          if (!fruitConfig.isRainbow && !fruitConfig.isBomb && fruit.level === baseLevel) {
+            if (this.isAdjacent(current, fruit)) {
+              visited.add(fruit);
+              group.push(fruit);
+              queue.push(fruit);
+            }
+          }
+        }
+      }
+      
+      return group;
+    }
+    
+    // 레인보우가 아닌 경우: 기존 로직 유지
     const group = [startFruit];
     const queue = [startFruit];
     const visited = new Set([startFruit]);
+    const baseLevel = startFruit.level;
 
     while (queue.length > 0) {
       const currentFruit = queue.shift();
+      const currentConfig = this.fruitConfigs[currentFruit.level];
+      const isCurrentRainbow = currentConfig && currentConfig.isRainbow;
 
-      // 같은 레벨의 모든 과일 중 인접한 것 찾기
       for (let fruit of this.fruits) {
+        // 효과 중인 과일 제외
+        if (fruit.isInRainbowEffect) continue;
         if (visited.has(fruit) || fruitsToRemove.includes(fruit)) continue;
-        if (fruit.level !== currentFruit.level) continue;
+        
+        const fruitConfig = this.fruitConfigs[fruit.level];
+        const isFruitRainbow = fruitConfig && fruitConfig.isRainbow;
+        
+        // 레인보우는 같은 레벨로 취급하여 인접 가능
+        if (isFruitRainbow) {
+          if (this.isAdjacent(currentFruit, fruit)) {
+            visited.add(fruit);
+            group.push(fruit);
+            queue.push(fruit);
+          }
+          continue;
+        }
+        
+        // 같은 레벨만 인접 가능
+        if (fruit.level !== baseLevel) continue;
 
         // 인접한지 확인
         if (this.isAdjacent(currentFruit, fruit)) {
@@ -1524,6 +2038,8 @@ export default class MainScene extends Phaser.Scene {
     let textureKey = `fruit_${this.previewLevel}`;
     if (fruitConfig.isBomb) {
       textureKey = `fruit_bomb_${this.previewNumber}`;
+    } else if (fruitConfig.isRainbow) {
+      textureKey = 'fruit_rainbow';
     }
 
     // 스위치 모드일 때는 과일 모습 숨기기
@@ -1660,10 +2176,182 @@ export default class MainScene extends Phaser.Scene {
     }
   }
 
+  playRainbowEffect(targetLevel, rainbowFruits, groupFruits) {
+    // 동일 레벨의 모든 과일 찾기
+    const sameLevelFruits = this.fruits.filter(f => 
+      f.level === targetLevel && 
+      !this.fruitConfigs[f.level].isRainbow && 
+      !this.fruitConfigs[f.level].isBomb
+    );
+    
+    // 모든 제거 대상 과일 (동종 + 레인보우)
+    const allFruitsToRemove = [...sameLevelFruits, ...rainbowFruits];
+
+    if (allFruitsToRemove.length === 0) return;
+    
+    // 레인보우 과일들에 효과 중 플래그 설정
+    rainbowFruits.forEach(f => f.isInRainbowEffect = true);
+
+    // 드롭 금지 설정 (3초)
+    this.canDrop = false;
+    this.time.delayedCall(3000, () => {
+      this.canDrop = true;
+    });
+
+    // 합체 그룹 과일들 중 실제로 없어질 과일들만 하이라이트
+    const highlightCircles = [];
+    
+    // allFruitsToRemove의 모든 과일에 하이라이트 표시
+    allFruitsToRemove.forEach(fruit => {
+      const isRainbow = this.fruitConfigs[fruit.level].isRainbow;
+      
+      if (isRainbow) {
+        // 레인보우는 분홍색 링
+        const highlight = this.add.circle(
+          fruit.x, fruit.y, fruit.radius + 12,
+          0xFF00FF, 0
+        );
+        highlight.setDepth(100);
+        highlight.setStrokeStyle(5, 0xFF00FF);
+        highlightCircles.push(highlight);
+      } else {
+        // 레인보우와 직접 인접 여부 확인
+        const isAdjacentToRainbow = rainbowFruits.some(rf => this.isAdjacent(rf, fruit));
+        
+        if (isAdjacentToRainbow) {
+          // 레인보우와 직접 인접한 과일 - 초록색 링
+          const highlight = this.add.circle(
+            fruit.x, fruit.y, fruit.radius + 12,
+            0x00FF00, 0
+          );
+          highlight.setDepth(100);
+          highlight.setStrokeStyle(5, 0x00FF00);
+          highlightCircles.push(highlight);
+        } else {
+          // 같은 레벨이지만 레인보우와 직접 인접하지 않은 과일 - 파란색 링
+          const highlight = this.add.circle(
+            fruit.x, fruit.y, fruit.radius + 12,
+            0x00BFFF, 0
+          );
+          highlight.setDepth(100);
+          highlight.setStrokeStyle(5, 0x00BFFF);
+          highlightCircles.push(highlight);
+        }
+      }
+      
+      // 맥동 효과 (모든 하이라이트에 적용)
+      const lastHighlight = highlightCircles[highlightCircles.length - 1];
+      this.tweens.add({
+        targets: lastHighlight,
+        scale: 1.4,
+        duration: 400,
+        yoyo: true,
+        repeat: 4
+      });
+    });
+
+    // 물리 고정
+    allFruitsToRemove.forEach(fruit => {
+      if (fruit.body) {
+        const Sleeping = Phaser.Physics.Matter.Matter.Sleeping;
+        Sleeping.set(fruit.body, true);
+        fruit.body.isSleeping = true;
+        fruit.body.velocity.x = 0;
+        fruit.body.velocity.y = 0;
+        fruit.body.angularVelocity = 0;
+      }
+    });
+
+    // 2초 후 제거
+    this.time.delayedCall(2000, () => {
+      // 하이라이트 먼저 제거
+      highlightCircles.forEach(h => h.destroy());
+      
+      allFruitsToRemove.forEach(fruit => {
+        if (!fruit || !fruit.active) return;
+        
+        // 플래그 제거
+        fruit.isInRainbowEffect = false;
+        
+        // 소멸 이펙트
+        this.createSimpleVanishEffect(fruit.x, fruit.y, fruit.radius);
+
+        if (fruit.fruitText) fruit.fruitText.destroy();
+        
+        const index = this.fruits.indexOf(fruit);
+        if (index > -1) {
+          this.fruits.splice(index, 1);
+        }
+        
+        if (fruit.body) {
+          this.matter.world.remove(fruit.body);
+        }
+        fruit.destroy();
+      });
+    });
+  }
+
+  // 간단한 소멸 이펙트 - 더 눈에 띄게
+  createSimpleVanishEffect(x, y, radius = 30) {
+    // 1. 중심 폭발 (흰색)
+    const flash = this.add.circle(x, y, radius * 0.5, 0xFFFFFF);
+    flash.setDepth(30);
+    
+    this.tweens.add({
+      targets: flash,
+      scale: 4,
+      alpha: { from: 1, to: 0 },
+      duration: 400,
+      ease: 'Power2',
+      onComplete: () => flash.destroy()
+    });
+    
+    // 2. 무지개 파티클 (8개)
+    const colors = [0xFF0000, 0xFF7F00, 0xFFFF00, 0x00FF00, 0x0000FF, 0x4B0082, 0x9400D3, 0xFF1493];
+    for (let i = 0; i < 8; i++) {
+      const angle = (i / 8) * Math.PI * 2;
+      const p = this.add.circle(x, y, 8, colors[i]);
+      p.setDepth(29);
+      
+      this.tweens.add({
+        targets: p,
+        x: x + Math.cos(angle) * (radius + 40),
+        y: y + Math.sin(angle) * (radius + 40),
+        alpha: 0,
+        duration: 500,
+        ease: 'Power2',
+        onComplete: () => p.destroy()
+      });
+    }
+    
+    // 3. 노란색 링 확장
+    const ring = this.add.circle(x, y, radius * 0.3, 0xFFD700);
+    ring.setStrokeStyle(4, 0xFFD700);
+    ring.setDepth(28);
+    
+    this.tweens.add({
+      targets: ring,
+      scale: 5,
+      alpha: { from: 0.8, to: 0 },
+      duration: 600,
+      ease: 'Power2',
+      onComplete: () => ring.destroy()
+    });
+    
+    // 안전장치: 1초 후 모두 제거
+    this.time.delayedCall(1000, () => {
+      if (flash.active) flash.destroy();
+    });
+  }
+
   // 과일에 살아있는 움직임 추가
   addFruitMovement(fruit) {
     // 표정 애니메이션 시작 (눈 깜빡임만)
-    let currentTexture = `fruit_${fruit.level}`;
+    const fruitConfig = this.fruitConfigs[fruit.level];
+    const isRainbow = fruitConfig && fruitConfig.isRainbow;
+    
+    // 레인보우 과일은 fruit_rainbow 텍스처 사용
+    let currentTexture = isRainbow ? 'fruit_rainbow' : `fruit_${fruit.level}`;
     let isBlinking = false;
     
     // 눈 깜빡임 애니메이션
@@ -1671,7 +2359,8 @@ export default class MainScene extends Phaser.Scene {
       if (!fruit.active || fruit.isScared) return; // 찡그린 표정일 때는 깜빡임 안 함
       
       // 깜빡임 텍스처로 변경
-      fruit.setTexture(`fruit_${fruit.level}_blink`);
+      const blinkTexture = isRainbow ? 'fruit_rainbow_blink' : `fruit_${fruit.level}_blink`;
+      fruit.setTexture(blinkTexture);
       isBlinking = true;
       
       // 150ms 후 원래 텍스처로 복귀
@@ -1700,12 +2389,15 @@ export default class MainScene extends Phaser.Scene {
     // 스프라이트인지 확인
     if (!fruit.setTexture) return;
     
-    // 폭탄은 제외
     const fruitConfig = this.fruitConfigs[fruit.level];
+    const isRainbow = fruitConfig && fruitConfig.isRainbow;
+    
+    // 폭탄은 제외
     if (fruitConfig && fruitConfig.isBomb) return;
     
-    // 텍스처가 존재하는지 확인
-    const scaredTextureKey = `fruit_${fruit.level}_scared`;
+    // 텍스처 키 설정
+    const scaredTextureKey = isRainbow ? 'fruit_rainbow_scared' : `fruit_${fruit.level}_scared`;
+    const baseTextureKey = isRainbow ? 'fruit_rainbow' : `fruit_${fruit.level}`;
     if (!this.textures.exists(scaredTextureKey)) {
       return;
     }
@@ -1746,12 +2438,16 @@ export default class MainScene extends Phaser.Scene {
   restartBlinking(fruit) {
     if (!fruit.active || fruit.isScared) return;
     
-    let currentTexture = `fruit_${fruit.level}`;
+    const fruitConfig = this.fruitConfigs[fruit.level];
+    const isRainbow = fruitConfig && fruitConfig.isRainbow;
+    
+    let currentTexture = isRainbow ? 'fruit_rainbow' : `fruit_${fruit.level}`;
     
     const startBlinking = () => {
       if (!fruit.active || fruit.isScared) return;
       
-      fruit.setTexture(`fruit_${fruit.level}_blink`);
+      const blinkTexture = isRainbow ? 'fruit_rainbow_blink' : `fruit_${fruit.level}_blink`;
+      fruit.setTexture(blinkTexture);
       
       this.time.delayedCall(150, () => {
         if (fruit.active && !fruit.isScared) {

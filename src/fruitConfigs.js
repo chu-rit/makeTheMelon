@@ -12,6 +12,7 @@ const fruitConfigs = [
   { radius: 185, name: 'Melon', minNumber: 1, maxNumber: 9, color: '#32CD32' },
   { radius: 200, name: 'Watermelon', minNumber: 1, maxNumber: 9, color: '#006400' },
   { radius: 50, name: 'Bomb', minNumber: 0, maxNumber: 0, color: '#333333', isBomb: true },
+  { radius: 50, name: 'Rainbow', minNumber: 0, maxNumber: 0, color: '#FF0000', isRainbow: true },
 ];
 
 export default fruitConfigs;

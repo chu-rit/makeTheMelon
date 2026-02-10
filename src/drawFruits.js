@@ -17,7 +17,8 @@ export function createFruitTextures(scene) {
     drawPineapple,
     drawMelon,
     drawWatermelon,
-    drawBomb
+    drawBomb,     // 인덱스 12: 폭탄
+    drawRainbow   // 인덱스 13: 레인보우
   ];
 
   function createTexture(scene, key, drawer, param = 9) {
@@ -74,6 +75,13 @@ export function createFruitTextures(scene) {
         for (let i = 0; i <= 9; i++) {
           createTexture(scene, `fruit_bomb_${i}`, drawer, i);
         }
+      } else if (index === 13) {
+        // 레인보우 과일 - fruit_rainbow 텍스처 생성
+        createTexture(scene, 'fruit_rainbow', drawer);
+        
+        // 표정 애니메이션을 위한 추가 텍스처
+        createTexture(scene, 'fruit_rainbow_blink', drawer, 'blink');
+        createTexture(scene, 'fruit_rainbow_scared', drawer, 'scared');
       } else {
         // 일반 과일
         createTexture(scene, `fruit_${index}`, drawer);
@@ -1409,3 +1417,89 @@ function drawBomb(canvas, size, timerValue = 9) {
 }
 
 // ...
+
+function drawRainbow(canvas, size, animation = 'normal') {
+  const ctx = canvas.getContext('2d');
+  const radius = size / 2;
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  
+  // 체리와 동일한 비율 적용 (0.85 비율)
+  const bodyRadius = radius * 0.85; 
+  const cy = radius; 
+  const cx = radius;
+  
+  // 1. 무지개 젤리 질감의 원형 바디
+  const gradient = ctx.createRadialGradient(cx - bodyRadius * 0.3, cy - bodyRadius * 0.3, 0, cx, cy, bodyRadius);
+  // 무지개 색상을 부드럽게 그라데이션
+  gradient.addColorStop(0, '#FFB6C1'); // 연한 핑크 (하이라이트)
+  gradient.addColorStop(0.2, '#FFD700'); // 골드
+  gradient.addColorStop(0.4, '#98FB98'); // 연한 초록
+  gradient.addColorStop(0.6, '#87CEEB'); // 하늘색
+  gradient.addColorStop(0.8, '#DDA0DD'); // 연한 보라
+  gradient.addColorStop(1, '#FF69B4'); // 핫핑크 (그림자)
+  
+  ctx.fillStyle = gradient;
+  ctx.beginPath();
+  ctx.arc(cx, cy, bodyRadius, 0, Math.PI * 2);
+  ctx.fill();
+
+  // 2. 이너 글로우
+  const innerGlow = ctx.createRadialGradient(cx, cy, bodyRadius * 0.7, cx, cy, bodyRadius);
+  innerGlow.addColorStop(0, 'rgba(255, 255, 255, 0)');
+  innerGlow.addColorStop(1, 'rgba(255, 100, 200, 0.2)');
+  ctx.fillStyle = innerGlow;
+  ctx.beginPath();
+  ctx.arc(cx, cy, bodyRadius, 0, Math.PI * 2);
+  ctx.fill();
+
+  // 3. 꼭지 (무지개 빛나는 별 모양)
+  ctx.fillStyle = '#FFD700'; // 골드
+  ctx.strokeStyle = '#FFA500';
+  ctx.lineWidth = 2;
+  
+  const starX = cx;
+  const starY = cy - bodyRadius * 0.9;
+  const starSize = bodyRadius * 0.25;
+  
+  // 별 모양 그리기
+  ctx.beginPath();
+  for (let i = 0; i < 5; i++) {
+    const angle = (Math.PI * 2 * i) / 5 - Math.PI / 2;
+    const outerX = starX + Math.cos(angle) * starSize;
+    const outerY = starY + Math.sin(angle) * starSize;
+    
+    const innerAngle = (Math.PI * 2 * (i + 0.5)) / 5 - Math.PI / 2;
+    const innerX = starX + Math.cos(innerAngle) * (starSize * 0.4);
+    const innerY = starY + Math.sin(innerAngle) * (starSize * 0.4);
+    
+    if (i === 0) {
+      ctx.moveTo(outerX, outerY);
+    } else {
+      ctx.lineTo(outerX, outerY);
+    }
+    ctx.lineTo(innerX, innerY);
+  }
+  ctx.closePath();
+  ctx.fill();
+  ctx.stroke();
+
+  // 4. 하이라이트
+  ctx.fillStyle = 'rgba(255, 255, 255, 0.85)';
+  ctx.beginPath();
+  ctx.ellipse(cx - bodyRadius * 0.3, cy - bodyRadius * 0.45, bodyRadius * 0.15, bodyRadius * 0.08, 0, 0, Math.PI * 2);
+  ctx.fill();
+
+  // 5. 작은 별들 장식 (무지개 과일 특징)
+  ctx.fillStyle = 'rgba(255, 215, 0, 0.6)';
+  for (let i = 0; i < 5; i++) {
+    const angle = (Math.PI * 2 * i) / 5;
+    const x = cx + Math.cos(angle) * bodyRadius * 0.5;
+    const y = cy + Math.sin(angle) * bodyRadius * 0.5;
+    ctx.beginPath();
+    ctx.arc(x, y, 3, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  // 동적 표정 그리기
+  drawFruitFaceAnimated(ctx, cx, cy, bodyRadius, animation);
+}
