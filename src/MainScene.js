@@ -75,9 +75,9 @@ export default class MainScene extends Phaser.Scene {
     // [테스트용] 중간 바닥 - 테스트 후 주석 해제하여 제거
     // createStyledWall(width / 2, 600, width, wallThickness, 'testFloor');
 
-    // 3. UI: 따뜻한 톤의 점수 텍스트
+    // 3. UI: 따뜻한 톤의 점수 텍스트 (레벨 표시 포함)
     this.score = 0;
-    this.scoreText = this.add.text(40, 40, '0', {
+    this.scoreText = this.add.text(40, 40, '0 (1)', {
       fontSize: '48px',
       color: '#5d4037',
       fontFamily: 'Arial',
@@ -965,10 +965,14 @@ export default class MainScene extends Phaser.Scene {
       }
     });
 
-    // 최대 레벨이 변경되었으면 떨어트릴 과일 레벨 업데이트
+    // 최대 레벨이 변경되었으면 떨어트릴 과일 레벨 업데이트 및 UI 갱신
     if (newMaxLevel !== this.maxFruitLevel) {
       this.maxFruitLevel = newMaxLevel;
       this.updateDropFruitLevel();
+      // UI 업데이트 (점수 텍스트에 레벨 표시)
+      if (this.scoreText) {
+        this.scoreText.setText(`${this.score} (${newMaxLevel})`);
+      }
     }
   }
 
@@ -1059,8 +1063,21 @@ export default class MainScene extends Phaser.Scene {
 
     // 화면 이탈 방지 (안전장치) - 폭탄 폭발로 인한 터널링 방지
     // wallThickness는 위에서 이미 선언됨
+    const Sleeping = Phaser.Physics.Matter.Matter.Sleeping;
+    
     this.fruits.forEach(fruit => {
       if (!fruit.body) return;
+
+      // Sleep 상태인 과일 깨우기 (공중에 떠있는 문제 방지)
+      if (fruit.body.isSleeping) {
+        // 과일이 공중에 있는 경우 (바닥에 닿지 않은 경우) 깨우기
+        const floorY = this.scale.height - wallThickness - fruit.radius;
+        if (fruit.y < floorY - 5) { // 바닥에 닿지 않았으면
+          Sleeping.set(fruit.body, false);
+          fruit.body.isSleeping = false;
+          fruit.body.sleepCounter = 0;
+        }
+      }
 
       const r = fruit.radius;
       let clampedX = fruit.x;
@@ -1894,7 +1911,7 @@ export default class MainScene extends Phaser.Scene {
       scoreToAdd = mergedCount * level;
     }
     this.score += scoreToAdd;
-    this.scoreText.setText(this.score);
+    this.scoreText.setText(`${this.score} (${this.maxFruitLevel})`);
 
     // 합쳐지는 이펙트 추가
     this.createMergeEffect(x, y, fruitConfig.color, radius);
